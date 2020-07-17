@@ -1,5 +1,4 @@
-﻿using MiddleGround.Save;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.U2D;
@@ -56,14 +55,12 @@ namespace MiddleGround.UI
             clickTime = 0;
             int day = MG_Manager.Instance.Get_Save_NextSignDay();
             MG_UIManager.Instance.ClosePopPanelAsync(MG_PopPanelType.SignPanel);
-            MG_SaveManager.LastSignDate = System.DateTime.Now;
+            MG_Manager.Instance.SignIn(true);
             if (day < 7)
                 MG_Manager.Instance.Show_SignRewardPanel_Reward(isGold[day] ? MG_PopRewardPanel_RewardType.SignGold : MG_PopRewardPanel_RewardType.SignCash, rewards[day], rewardmutiples[day]);
             else
                 MG_Manager.Instance.Show_PopDoublePanel_Reward(MG_PopDoublePanel_RewardType.SignScratchTicket, 5);
             MG_UIManager.Instance.UpdateSignRP();
-            day %= 7;
-            MG_SaveManager.SignState = MG_SaveManager.SignState.Remove(day, 1).Insert(day, "1");
         }
         void OnNothanksClick()
         {
@@ -72,14 +69,12 @@ namespace MiddleGround.UI
             {
                 int day = MG_Manager.Instance.Get_Save_NextSignDay();
                 MG_UIManager.Instance.ClosePopPanelAsync(MG_PopPanelType.SignPanel);
-                MG_SaveManager.LastSignDate = System.DateTime.Now;
+                MG_Manager.Instance.SignIn(false);
                 if (day < 7)
                     MG_Manager.Instance.Show_SignRewardPanel_Reward(isGold[day] ? MG_PopRewardPanel_RewardType.SignGold : MG_PopRewardPanel_RewardType.SignCash, rewards[day], 1);
                 else
                     MG_Manager.Instance.Show_PopDoublePanel_Reward(MG_PopDoublePanel_RewardType.SignScratchTicket, 1);
                 MG_UIManager.Instance.UpdateSignRP();
-                day %= 7;
-                MG_SaveManager.SignState = MG_SaveManager.SignState.Remove(day, 1).Insert(day, "0");
             }
             else
                 MG_UIManager.Instance.ClosePopPanelAsync(MG_PopPanelType.SignPanel);
@@ -93,7 +88,7 @@ namespace MiddleGround.UI
             else
             {
                 int lastSignDay = MG_Manager.Instance.Get_Save_NextSignDay();
-                string signState = MG_SaveManager.SignState;
+                string signState = MG_Manager.Instance.Get_Save_SignStatePerDay();
                 bool changeScratchTicket = false;
                 if (lastSignDay >= 7)
                 {

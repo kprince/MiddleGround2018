@@ -129,7 +129,7 @@ namespace MiddleGround.UI
             if (!MG_Manager.Instance.canChangeGame) return;
             MG_UIManager.Instance.ShowPopPanelAsync(MG_PopPanelType.SignPanel);
         }
-        void OnScratchButtonClick()
+        public void OnScratchButtonClick()
         {
             MG_Manager.Play_ButtonClick();
             if (!MG_Manager.Instance.canChangeGame) return;
@@ -139,7 +139,7 @@ namespace MiddleGround.UI
             MG_UIManager.Instance.ShowGamePanel(MG_GamePanelType.ScratchPanel);
             SetSpecialToken(MG_SpecialTokenType.ScratchToken);
         }
-        void OnDiceButtonClick()
+        public void OnDiceButtonClick()
         {
             MG_Manager.Play_ButtonClick();
             if (!MG_Manager.Instance.canChangeGame) return;
@@ -147,7 +147,7 @@ namespace MiddleGround.UI
             MG_UIManager.Instance.ShowGamePanel(MG_GamePanelType.DicePanel);
             SetSpecialToken(MG_SpecialTokenType.DiceToken);
         }
-        void OnSlotsButtonClick()
+        public void OnSlotsButtonClick()
         {
             MG_Manager.Play_ButtonClick();
             if (!MG_Manager.Instance.canChangeGame) return;

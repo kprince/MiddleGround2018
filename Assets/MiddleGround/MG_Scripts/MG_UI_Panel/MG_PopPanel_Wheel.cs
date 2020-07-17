@@ -143,7 +143,7 @@ namespace MiddleGround.UI
                         float angleZ = rect_wheel.localEulerAngles.z % 360;
                         if (angleZ < 0)
                             angleZ += 360;
-                        if (Mathf.Abs(angleZ - endAngleZ) < 2)
+                        if (Mathf.Abs(angleZ - endAngleZ) < 3)
                         {
                             rect_wheel.localEulerAngles = new Vector3(0, 0, endAngleZ);
                             isStop = true;

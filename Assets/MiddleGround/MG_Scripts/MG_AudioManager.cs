@@ -1,5 +1,4 @@
-﻿using MiddleGround.Save;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -30,7 +29,7 @@ namespace MiddleGround.Audio
             as_bgm.clip = ac_bgm;
             as_bgm.loop = true;
             as_bgm.playOnAwake = false;
-            as_bgm.mute = !MG_SaveManager.MusicOn;
+            as_bgm.mute = !!MG_Manager.Instance.Get_Save_MusicOn();
             as_bgm.Play();
         }
         public AudioSource PlayOneShot(MG_PlayAudioType audioType)
@@ -53,7 +52,7 @@ namespace MiddleGround.Audio
                         tempAS.clip = tempAC;
                         tempAS.loop = false;
                         tempAS.playOnAwake = false;
-                        tempAS.mute = !MG_SaveManager.SoundOn;
+                        tempAS.mute = !MG_Manager.Instance.Get_Save_SoundOn();
                         tempAS.Play();
                         hasPlayed = true;
                         return tempAS;
@@ -65,7 +64,7 @@ namespace MiddleGround.Audio
                     tempAS.clip = tempAC;
                     tempAS.loop = false;
                     tempAS.playOnAwake = false;
-                    tempAS.mute = !MG_SaveManager.SoundOn;
+                    tempAS.mute = !MG_Manager.Instance.Get_Save_SoundOn();
                     tempAS.Play();
                     as_all.Add(tempAS);
                     return tempAS;
@@ -98,15 +97,15 @@ namespace MiddleGround.Audio
             result.loop = true;
             return result;
         }
-        public void SetMusicState(bool oldState)
+        public void SetMusicState(bool state)
         {
-            as_bgm.mute = oldState;
+            as_bgm.mute = !state;
         }
-        public void SetSoundState(bool oldState)
+        public void SetSoundState(bool state)
         {
             foreach(AudioSource temp in as_all)
             {
-                temp.mute = oldState;
+                temp.mute = !state;
             }
         }
         public void PauseBgm(bool pause)

@@ -21,7 +21,7 @@ SpriteAtlas:
       crunchedCompression: 0
       sRGB: 1
     platformSettings:
-    - serializedVersion: 3
+    - serializedVersion: 2
       m_BuildTarget: iPhone
       m_MaxTextureSize: 2048
       m_ResizeAlgorithm: 0
@@ -32,7 +32,6 @@ SpriteAtlas:
       m_AllowsAlphaSplitting: 0
       m_Overridden: 1
       m_AndroidETC2FallbackOverride: 0
-      m_ForceMaximumCompressionQuality_BC6H_BC7: 0
     packingSettings:
       serializedVersion: 2
       padding: 4
@@ -43,14 +42,16 @@ SpriteAtlas:
     variantMultiplier: 1
     packables:
     - {fileID: 102900000, guid: 8b84f64c1c9fc93479134521cd5918f0, type: 3}
-    totalSpriteSurfaceArea: 334461
+    totalSpriteSurfaceArea: 395343
     bindAsDefault: 1
   m_MasterAtlas: {fileID: 0}
   m_PackedSprites:
+  - {fileID: 21300000, guid: cf0543a18d537124facc51d0940bd5ab, type: 3}
   - {fileID: 21300000, guid: c9b1a402de7643d41b480f433e87bf87, type: 3}
   - {fileID: 21300000, guid: 20d7f2547571c1b4f890957cef91652f, type: 3}
   - {fileID: 21300000, guid: 985c0ef66be162945bed0560c861f851, type: 3}
   m_PackedSpriteNamesToIndex:
+  - MG_Sprite_DiceSlots_Button
   - MG_Sprite_DiceSlots_NoticeA
   - MG_Sprites_DiceSlots_BG
   - MG_Sprite_DiceSlots_NoticeB

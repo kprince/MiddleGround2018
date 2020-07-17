@@ -42,7 +42,11 @@ namespace MiddleGround
         {
             Instance = this;
             Application.targetFrameRate = 60;
-            Time.timeScale = 5;
+#if UNITY_EDITOR
+            Debug.unityLogger.logEnabled = true;
+#else
+            Debug.unityLogger.logEnabled = false;
+#endif
             gameObject.AddComponent<MG_UIManager>().Init(
                 transform.GetChild(0),
                 transform.GetChild(1),
@@ -51,14 +55,44 @@ namespace MiddleGround
             MG_Config = Resources.Load<ScriptableObject>("MG_ConfigAssets/MG_Dice_Config") as MG_Config;
             gameObject.AddComponent<MG_AudioManager>().Init(transform.Find("MG_AudioRoot").gameObject);
         }
-        public void ShowMenuPanel()
+        private void Start()
+        {
+            ShowMenuPanel(MG_GamePanelType.DicePanel);
+        }
+        public void ShowMenuPanel(MG_GamePanelType startGamePanel)
         {
             MG_Fly.Init();
-            MG_UIManager.Instance.ShowMenuPanel();
+            MG_UIManager.Instance.ShowMenuPanel(startGamePanel);
         }
         public void CloseMenuPanel()
         {
             MG_UIManager.Instance.CloseMenuPanel();
+        }
+        public bool Get_Save_SoundOn()
+        {
+            return MG_SaveManager.SoundOn;
+        }
+        public void Set_Save_SoundOn(bool state,bool isMG_Setting)
+        {
+            MG_AudioManager.Instance.SetSoundState(state);
+            if (isMG_Setting)
+            {
+                //当经过中台设置界面设置时，同时设置非中台的声音
+                MG_SaveManager.SoundOn = state;
+            }
+        } 
+        public bool Get_Save_MusicOn()
+        {
+            return MG_SaveManager.MusicOn;
+        }
+        public void Set_Save_MusicOn(bool state,bool isMG_Setting)
+        {
+            MG_AudioManager.Instance.SetMusicState(state);
+            if (isMG_Setting)
+            {
+                //当经过中台设置界面设置时，同时设置非中台的声音
+                MG_SaveManager.MusicOn = state;
+            }
         }
         public bool Get_Save_PackB()
         {
@@ -82,7 +116,7 @@ namespace MiddleGround
             MG_SaveManager.Gold += value;
             if (value < 0)
                 MG_UIManager.Instance.UpdateMenuPanel_GoldText();
-            MG_UIManager.Instance.UpdateSlotsSpinButton(MG_SaveManager.Gold);
+            MG_UIManager.Instance.UpdateSlotsSpinButton(Get_Save_Gold());
             if (value > 0)
                 Play_Effect();
         }
@@ -240,6 +274,17 @@ namespace MiddleGround
                 }
             }
             return false;
+        }
+        public string Get_Save_SignStatePerDay()
+        {
+            return MG_SaveManager.SignState;
+        }
+        public void SignIn(bool watchAd)
+        {
+            int today = Get_Save_NextSignDay();
+            today %= 7;
+            MG_SaveManager.SignState=MG_SaveManager.SignState.Remove(today, 1).Insert(today, watchAd?"1":"0");
+            MG_SaveManager.LastSignDate = DateTime.Now;
         }
         public int Get_Config_NextGiftStep()
         {
@@ -789,7 +834,7 @@ namespace MiddleGround
                 ("new_value", Get_Save_Gold().ToString()),
                 //累计体力
                 ("stage_id", Get_Save_TotalTimes().ToString()),
-                //广告id
+                //广告描述
                 ("id", adByWay),
                 //广告类型，0插屏1奖励视频
                 ("type", isRewardAd ? "1" : "0"),
