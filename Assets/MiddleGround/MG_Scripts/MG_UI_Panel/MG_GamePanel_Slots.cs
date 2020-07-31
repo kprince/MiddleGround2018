@@ -1,8 +1,10 @@
 ﻿using MiddleGround.GameConfig;
 using MiddleGround.Save;
+using MiddleGround.UI.ButtonAnimation;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.U2D;
 using UnityEngine.UI;
 
 namespace MiddleGround.UI
@@ -15,19 +17,23 @@ namespace MiddleGround.UI
         public Image img_L;
         public Image img_M;
         public Image img_R;
-        public Image img_BG;
-        public Image img_LightUp;
-        public Image img_LightDown;
-        public GameObject go_ad;
-        public GameObject go_use;
+        public Image img_Light;
+        public Image img_ButtonText;
+        public Text text_FruitNum;
         public GameObject go_lock;
-        public RectTransform rect_spin;
+        public Transform trans_spin;
+        public MG_Slots_ButtonAnimation _ButtonAnimation;
+
         Sprite sp_LightA;
         Sprite sp_LightB;
+        Sprite sp_spin;
+        Sprite sp_adSpin;
+        Sprite sp_adSpeedup;
+
+        SpriteAtlas slotsSA;
 
         public Text text_SpinGoldNum;
         public Text text_X10;
-        public Text text_btn;
         public Text text_Locktime;
         static readonly Dictionary<int, float> dic_type_offsetY = new Dictionary<int, float>()
         {
@@ -43,19 +49,26 @@ namespace MiddleGround.UI
 
         const string mat_mainTex_Key = "_MainTex";
         float finalOffsetX = 0.25f;
-        const float offsetXA = 0.5f;
-        const float offsetXB = 0;
         protected override void Awake()
         {
             base.Awake();
+
             btn_Spin.onClick.AddListener(OnSpinButtonClick);
             btn_addMutiple.onClick.AddListener(OnX10ButtonClick);
+            MG_UIManager.Instance.MenuPanel.dic_flytarget_transform.Add((int)MG_MenuFlyTarget.Cherry, text_FruitNum.transform);
+            MG_UIManager.Instance.MenuPanel.dic_flytarget_transform.Add((int)MG_MenuFlyTarget.Orange, text_FruitNum.transform);
+            MG_UIManager.Instance.MenuPanel.dic_flytarget_transform.Add((int)MG_MenuFlyTarget.Watermalen, text_FruitNum.transform);
             bool packB = MG_Manager.Instance.Get_Save_PackB();
             mutiplesIndex = 0;
             text_X10.text = "x" + mutiples[mutiplesIndex];
-            finalOffsetX = packB ? offsetXB : offsetXA;
-            sp_LightA = img_LightUp.sprite;
-            sp_LightB = img_LightDown.sprite;
+            finalOffsetX = 0;
+            slotsSA = MG_UIManager.Instance.GetSpriteAtlas((int)MG_GamePanelType.SlotsPanel);
+            sp_adSpeedup = slotsSA.GetSprite("MG_Sprite_Slots_Speedup");
+            sp_adSpin = slotsSA.GetSprite("MG_Sprite_Slots_AdSpin");
+            sp_spin = slotsSA.GetSprite("MG_Sprite_Slots_Spin");
+            sp_LightA = slotsSA.GetSprite("MG_Sprite_Slots_LightA");
+            sp_LightB = slotsSA.GetSprite("MG_Sprite_Slots_LightB");
+            _ButtonAnimation.Init(() => { img_ButtonText.transform.localPosition = new Vector2(0, -11); }, () => { img_ButtonText.transform.localPosition = new Vector2(0, 15); });
         }
         int clickTime = 0;
         void OnSpinButtonClick()
@@ -93,7 +106,6 @@ namespace MiddleGround.UI
         {
             clickTime = 0;
             isLocked = false;
-            text_btn.text = "SPIN";
             MG_SaveManager.SlotsLockDate = System.DateTime.Now.AddSeconds(-3601);
             CheckIsLock();
             UpdateSpinButtonState(MG_Manager.Instance.Get_Save_Gold());
@@ -293,24 +305,24 @@ namespace MiddleGround.UI
             switch (rewardType)
             {
                 case MG_Slots_RewardType.Cash:
-                    MG_Manager.Instance.Show_PopCashPanel_Reward(rewardNum);
+                    MG_Manager.Instance.Show_CashRewardPanel(MG_RewardPanelType.AdClaim, rewardNum);
                     break;
                 case MG_Slots_RewardType.Diamond:
                     rewardNum -= rewardNum % 10;
-                    MG_Manager.Instance.Show_PopDoublePanel_Reward(MG_PopDoublePanel_RewardType.Diamond, rewardNum);
+                    MG_Manager.Instance.Show_MostRewardPanel(MG_RewardPanelType.AdDouble, MG_RewardType.Diamond, rewardNum);
                     break;
                 case MG_Slots_RewardType.Gold:
                     rewardNum -= rewardNum % 10;
-                    MG_Manager.Instance.Show_PopDoublePanel_Reward(MG_PopDoublePanel_RewardType.Gold, rewardNum);
+                    MG_Manager.Instance.Show_MostRewardPanel(MG_RewardPanelType.AdDouble, MG_RewardType.Gold, rewardNum);
                     break;
                 case MG_Slots_RewardType.Cherry:
-                    MG_Manager.Instance.Show_PopDoublePanel_Reward(MG_PopDoublePanel_RewardType.Cherry, rewardNum);
+                    MG_Manager.Instance.Show_MostRewardPanel(MG_RewardPanelType.AdClaim, MG_RewardType.Cherry, rewardNum);
                     break;
                 case MG_Slots_RewardType.Orange:
-                    MG_Manager.Instance.Show_PopDoublePanel_Reward(MG_PopDoublePanel_RewardType.Orange, rewardNum);
+                    MG_Manager.Instance.Show_MostRewardPanel(MG_RewardPanelType.AdClaim, MG_RewardType.Orange, rewardNum);
                     break;
                 case MG_Slots_RewardType.Watermalen:
-                    MG_Manager.Instance.Show_PopDoublePanel_Reward(MG_PopDoublePanel_RewardType.Watermalen, rewardNum);
+                    MG_Manager.Instance.Show_MostRewardPanel(MG_RewardPanelType.AdClaim, MG_RewardType.Watermalen, rewardNum);
                     break;
                 case MG_Slots_RewardType.Gift:
                     MG_Manager.Instance.Random_DiceOrExtraReward(MG_PopRewardPanel_RewardType.Extra);
@@ -324,16 +336,17 @@ namespace MiddleGround.UI
             isSpining = false;
             MG_Manager.Instance.canChangeGame = true;
         }
+        bool spinAnimationPlaying = false;
         public override IEnumerator OnEnter()
         {
             canvasGroup.alpha = 1;
             canvasGroup.blocksRaycasts = true;
-            img_BG.sprite = MG_Manager.Instance.Get_GamePanelBg();
             img_L.material.SetTextureOffset(mat_mainTex_Key, new Vector2(finalOffsetX, dic_type_offsetY[(int)MG_Slots_RewardType.SSS]));
             img_M.material.SetTextureOffset(mat_mainTex_Key, new Vector2(finalOffsetX, dic_type_offsetY[(int)MG_Slots_RewardType.SSS]));
             img_R.material.SetTextureOffset(mat_mainTex_Key, new Vector2(finalOffsetX, dic_type_offsetY[(int)MG_Slots_RewardType.SSS]));
             CheckIsLock();
             UpdateSpinButtonState(MG_SaveManager.Gold);
+            UpdateFruitNumText();
             yield return null;
             clickTime = 0;
         }
@@ -365,47 +378,30 @@ namespace MiddleGround.UI
                 mutiplesIndex = 0;
                 text_X10.text = "x" + mutiples[0];
             }
-            if (gold >= baseNum * mutiples[1])
-                btn_addMutiple.gameObject.SetActive(true);
-            else
-                btn_addMutiple.gameObject.SetActive(false);
             if (gold >= baseNum * mutiples[0])
             {
-                if (go_ad.activeSelf)
-                    go_ad.SetActive(false);
-                if (!go_use.activeSelf)
-                    go_use.SetActive(true);
-                rect_spin.localPosition = new Vector2(0, 40);
+                img_ButtonText.sprite = sp_spin;
                 needAd = false;
             }
             else
             {
-                if (!go_ad.activeSelf)
-                    go_ad.SetActive(true);
-                if (go_use.activeSelf)
-                    go_use.SetActive(false);
-                rect_spin.localPosition = new Vector2(44, 0);
+                img_ButtonText.sprite = sp_adSpin;
                 needAd = true;
             }
+        }
+        public void UpdateFruitNumText()
+        {
+            text_FruitNum.text = MG_Manager.Instance.Get_Save_Fruits().ToString();
         }
         IEnumerator AutoShiningLight()
         {
             bool isA = false;
+            WaitForSeconds wait = new WaitForSeconds(0.1f*Time.timeScale);
             while (true)
             {
-                yield return new WaitForSeconds(0.1f * Time.timeScale);
-                if (isA)
-                {
-                    img_LightDown.sprite = sp_LightA;
-                    img_LightUp.sprite = sp_LightB;
-                    isA = false;
-                }
-                else
-                {
-                    img_LightDown.sprite = sp_LightB;
-                    img_LightUp.sprite = sp_LightA;
-                    isA = true;
-                }
+                yield return wait;
+                isA = !isA;
+                img_Light.sprite = isA ? sp_LightA : sp_LightB;
             }
         }
         bool isLocked = false;
@@ -443,24 +439,13 @@ namespace MiddleGround.UI
             {
                 if (!go_lock.activeSelf)
                     go_lock.SetActive(true);
-                if (!go_ad.activeSelf)
-                    go_ad.SetActive(true);
-                if (go_use.activeSelf)
-                    go_use.SetActive(false);
-                rect_spin.localPosition = new Vector2(62.971f, 0);
-                text_btn.text = "SPEED UP";
-                btn_addMutiple.gameObject.SetActive(false);
+                img_ButtonText.sprite = sp_adSpeedup;
             }
             else
             {
                 if (go_lock.activeSelf)
                     go_lock.SetActive(false);
-                if (go_ad.activeSelf)
-                    go_ad.SetActive(false);
-                if (!go_use.activeSelf)
-                    go_use.SetActive(true);
-                rect_spin.localPosition = new Vector2(0, 40);
-                text_btn.text = "SPIN";
+                img_ButtonText.sprite = sp_spin;
             }
         }
         IEnumerator WaitForUnlock(int seconds)

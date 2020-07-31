@@ -4,8 +4,8 @@ using MiddleGround.Save;
 using MiddleGround.UI;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using UnityEngine;
+using UnityEngine.U2D;
 
 namespace MiddleGround
 {
@@ -13,13 +13,6 @@ namespace MiddleGround
     {
         public static MG_Manager Instance;
         public bool canChangeGame = true;
-
-        public MG_PopRewardPanel_RewardType MG_PopDiceReward_Type;
-        public int MG_PopDiceReward_Num;
-        public float MG_PopDiceReward_Mutiple;
-
-        public MG_PopDoublePanel_RewardType MG_PopDoublePanel_Type;
-        public int MG_PopDoublePanel_Num;
 
         public int MG_PopCashPanel_Num;
         public bool hasGift = false;
@@ -36,63 +29,62 @@ namespace MiddleGround
         public bool willRateus = false;
         public bool isGuid = false;
         public MG_Guid_Type next_GuidType = MG_Guid_Type.Null;
+        public bool NeedForceCashoutGuid = true;
+        public bool NeedRateusGuid = true;
+        public bool NeedFirstComeReward = true;
 
         MG_Config MG_Config;
+        CanvasGroup canvasGroup;
+        bool hasShow = false;
         private void Awake()
         {
             Instance = this;
+            canvasGroup = GetComponent<CanvasGroup>();
             Application.targetFrameRate = 60;
-#if UNITY_EDITOR
-            Debug.unityLogger.logEnabled = true;
-#else
-            Debug.unityLogger.logEnabled = false;
-#endif
             gameObject.AddComponent<MG_UIManager>().Init(
-                transform.GetChild(0),
                 transform.GetChild(1),
-                transform.GetChild(2)
+                transform.GetChild(2),
+                transform.GetChild(3)
                 );
             MG_Config = Resources.Load<ScriptableObject>("MG_ConfigAssets/MG_Dice_Config") as MG_Config;
             gameObject.AddComponent<MG_AudioManager>().Init(transform.Find("MG_AudioRoot").gameObject);
         }
         private void Start()
         {
-            ShowMenuPanel(MG_GamePanelType.DicePanel);
+            ShowMGPanel();
         }
-        public void ShowMenuPanel(MG_GamePanelType startGamePanel)
+        public void ShowMGPanel(MG_GamePanelType startShowPanel = MG_GamePanelType.DicePanel)
         {
-            MG_Fly.Init();
-            MG_UIManager.Instance.ShowMenuPanel(startGamePanel);
-        }
-        public void CloseMenuPanel()
-        {
-            MG_UIManager.Instance.CloseMenuPanel();
-        }
-        public bool Get_Save_SoundOn()
-        {
-            return MG_SaveManager.SoundOn;
-        }
-        public void Set_Save_SoundOn(bool state,bool isMG_Setting)
-        {
-            MG_AudioManager.Instance.SetSoundState(state);
-            if (isMG_Setting)
+            canvasGroup.alpha = 1;
+            canvasGroup.blocksRaycasts = true;
+            if (!hasShow)
             {
-                //当经过中台设置界面设置时，同时设置非中台的声音
-                MG_SaveManager.SoundOn = state;
+                hasShow = true;
+                MG_UIManager.Instance.ShowMenuPanel(startShowPanel);
             }
-        } 
-        public bool Get_Save_MusicOn()
-        {
-            return MG_SaveManager.MusicOn;
-        }
-        public void Set_Save_MusicOn(bool state,bool isMG_Setting)
-        {
-            MG_AudioManager.Instance.SetMusicState(state);
-            if (isMG_Setting)
+            else
             {
-                //当经过中台设置界面设置时，同时设置非中台的声音
-                MG_SaveManager.MusicOn = state;
+                switch (startShowPanel)
+                {
+                    case MG_GamePanelType.DicePanel:
+                        MG_UIManager.Instance.MenuPanel.OnDiceButtonClick();
+                        break;
+                    case MG_GamePanelType.ScratchPanel:
+                        MG_UIManager.Instance.MenuPanel.OnScratchButtonClick();
+                        break;
+                    case MG_GamePanelType.SlotsPanel:
+                        MG_UIManager.Instance.MenuPanel.OnSlotsButtonClick();
+                        break;
+                    case MG_GamePanelType.WheelPanel:
+                        MG_UIManager.Instance.MenuPanel.OnWheelButtonClick();
+                        break;
+                }
             }
+        }
+        public void CloseMGPanel()
+        {
+            canvasGroup.alpha = 0;
+            canvasGroup.blocksRaycasts = false;
         }
         public bool Get_Save_PackB()
         {
@@ -107,6 +99,14 @@ namespace MiddleGround
             MG_SaveManager.PackB = true;
             SendAdjustPackBEvent();
         }
+        public bool Get_Save_SoundOn()
+        {
+            return MG_SaveManager.SoundOn;
+        }
+        public void Set_Save_SoundOn(bool value)
+        {
+            MG_SaveManager.SoundOn = value;
+        }
         public int Get_Save_Gold()
         {
             return MG_SaveManager.Gold;
@@ -116,7 +116,7 @@ namespace MiddleGround
             MG_SaveManager.Gold += value;
             if (value < 0)
                 MG_UIManager.Instance.UpdateMenuPanel_GoldText();
-            MG_UIManager.Instance.UpdateSlotsSpinButton(Get_Save_Gold());
+            MG_UIManager.Instance.UpdateSlotsSpinButton(MG_SaveManager.Gold);
             if (value > 0)
                 Play_Effect();
         }
@@ -152,7 +152,7 @@ namespace MiddleGround
             MG_SaveManager.ScratchTickets += value;
             if (value < 0)
             {
-                MG_UIManager.Instance.UpdateMenuPanel_ScratchTicketText();
+                MG_UIManager.Instance.Update_ScratchTicketText();
                 Add_Save_ScratchTotalTimes(-value);
             }
             if (value > 0)
@@ -181,7 +181,10 @@ namespace MiddleGround
         {
             MG_SaveManager.DiceToken += value;
             if (value > 0)
+            {
                 Play_Effect();
+                MG_SaveManager.GetAmazonTimes++;
+            }
         }
         public int Get_Save_777()
         {
@@ -191,7 +194,10 @@ namespace MiddleGround
         {
             MG_SaveManager.SpecialToken_777 += value;
             if (value > 0)
+            {
                 Play_Effect();
+                MG_SaveManager.Get777Times++;
+            }
         }
         public int Get_Save_Fruits()
         {
@@ -201,7 +207,10 @@ namespace MiddleGround
         {
             MG_SaveManager.SpecialToken_Fruits += value;
             if (value > 0)
+            {
                 Play_Effect();
+                MG_SaveManager.GetFruitsTimes++;
+            }
         }
         public int Get_Save_Diamond()
         {
@@ -222,7 +231,7 @@ namespace MiddleGround
         public void Add_Save_DiceTotalTimes(int value = 1)
         {
             MG_SaveManager.DiceTotalPlayTimes += value;
-            if (MG_SaveManager.DiceTotalPlayTimes == 3)
+            if (MG_SaveManager.DiceTotalPlayTimes >= 3 && !MG_SaveManager.GuidDice)
                 next_GuidType = MG_Guid_Type.DiceGuid;
         }
         public int Get_Save_ScratchTotalTimes()
@@ -237,7 +246,7 @@ namespace MiddleGround
         {
             return MG_SaveManager.SlotsTotalPlayTimes;
         }
-        public void Add_Save_SlotsTotalTimes(int value=1)
+        public void Add_Save_SlotsTotalTimes(int value = 1)
         {
             MG_SaveManager.SlotsTotalPlayTimes += value;
         }
@@ -275,17 +284,6 @@ namespace MiddleGround
             }
             return false;
         }
-        public string Get_Save_SignStatePerDay()
-        {
-            return MG_SaveManager.SignState;
-        }
-        public void SignIn(bool watchAd)
-        {
-            int today = Get_Save_NextSignDay();
-            today %= 7;
-            MG_SaveManager.SignState=MG_SaveManager.SignState.Remove(today, 1).Insert(today, watchAd?"1":"0");
-            MG_SaveManager.LastSignDate = DateTime.Now;
-        }
         public int Get_Config_NextGiftStep()
         {
             int rewardRangeIndex = Get_Config_DiceRewardRangeIndex();
@@ -321,7 +319,7 @@ namespace MiddleGround
         public Sprite Get_GamePanelBg()
         {
             int bgindex = MG_SaveManager.CurrentBgIndex;
-            if(MG_GamePanel_BG[bgindex] is null)
+            if (MG_GamePanel_BG[bgindex] is null)
             {
                 MG_GamePanel_BG[bgindex] = Resources.Load<Sprite>("MG_GamePanel_BG/MG_GamePanel_BG" + bgindex);
             }
@@ -334,15 +332,15 @@ namespace MiddleGround
             MG_Wheel_RewardType[] _Wheel_ConfigTypes = new MG_Wheel_RewardType[length];
             rewardNum = new int[length];
             bool packB = Get_Save_PackB();
-            for(int i = 0; i < length; i++)
+            for (int i = 0; i < length; i++)
             {
-                if(!packB&& _Wheel_Configs[i].rewardType == MG_Wheel_RewardType.Amazon)
+                if (!packB && _Wheel_Configs[i].rewardType == MG_Wheel_RewardType.Amazon)
                 {
                     _Wheel_ConfigTypes[i] = MG_Wheel_RewardType.Gold;
                     rewardNum[i] = 500;
                     continue;
                 }
-               _Wheel_ConfigTypes[i] = _Wheel_Configs[i].rewardType;
+                _Wheel_ConfigTypes[i] = _Wheel_Configs[i].rewardType;
                 rewardNum[i] = _Wheel_Configs[i].rewardNum;
             }
             return _Wheel_ConfigTypes;
@@ -353,38 +351,36 @@ namespace MiddleGround
             switch (_Dice_RewardType)
             {
                 case MG_PopRewardPanel_RewardType.Cash:
-                    MG_PopDiceReward_Type = MG_PopRewardPanel_RewardType.Cash;
                     MG_Dice_SpecialPropsConfig _SpecialPropsCashConfig = MG_Config.MG_Dice_SpecialPropsConfigs[rewardRangeIndex];
-                    MG_PopDiceReward_Num = UnityEngine.Random.Range(_SpecialPropsCashConfig.minCashReward, _SpecialPropsCashConfig.maxCashReward);
-                    MG_PopDiceReward_Mutiple = _SpecialPropsCashConfig.cashMutiple[UnityEngine.Random.Range(0, _SpecialPropsCashConfig.cashMutiple.Count)];
-                    MG_UIManager.Instance.ShowPopPanelAsync(MG_PopPanelType.DiceRewardPanel);
+                    int rewardCashNum = UnityEngine.Random.Range(_SpecialPropsCashConfig.minCashReward, _SpecialPropsCashConfig.maxCashReward);
+                    float rewardCashMutiple = _SpecialPropsCashConfig.cashMutiple[UnityEngine.Random.Range(0, _SpecialPropsCashConfig.cashMutiple.Count)];
+                    Show_CashRewardPanel(MG_RewardPanelType.AdRandom, rewardCashNum, rewardCashMutiple);
                     break;
                 case MG_PopRewardPanel_RewardType.Gold:
-                    MG_PopDiceReward_Type = MG_PopRewardPanel_RewardType.Gold;
                     MG_Dice_SpecialPropsConfig _SpecialPropsGoldConfig = MG_Config.MG_Dice_SpecialPropsConfigs[rewardRangeIndex];
-                    MG_PopDiceReward_Num = UnityEngine.Random.Range(_SpecialPropsGoldConfig.minGoldReward, _SpecialPropsGoldConfig.maxGoldReward);
-                    MG_PopDiceReward_Mutiple = _SpecialPropsGoldConfig.goldMutiple[UnityEngine.Random.Range(0, _SpecialPropsGoldConfig.goldMutiple.Count)];
-                    MG_UIManager.Instance.ShowPopPanelAsync(MG_PopPanelType.DiceRewardPanel);
+                    int rewardGoldNum = UnityEngine.Random.Range(_SpecialPropsGoldConfig.minGoldReward, _SpecialPropsGoldConfig.maxGoldReward);
+                    float rewardGoldMutiple = _SpecialPropsGoldConfig.goldMutiple[UnityEngine.Random.Range(0, _SpecialPropsGoldConfig.goldMutiple.Count)];
+                    Show_MostRewardPanel(MG_RewardPanelType.AdRandom, MG_RewardType.Gold, rewardGoldNum, rewardGoldMutiple);
                     break;
                 case MG_PopRewardPanel_RewardType.Extra:
                     MG_Dice_ExtraBonusConfig _ExtraBonusConfig = MG_Config.MG_Dice_ExtraBonusConfigs[rewardRangeIndex];
                     float result = UnityEngine.Random.Range(0, _ExtraBonusConfig.goldBonusRate + _ExtraBonusConfig.cashBonusRate);
                     if (result < _ExtraBonusConfig.goldBonusRate)
                     {
-                        MG_PopDiceReward_Type = MG_PopRewardPanel_RewardType.ExtraGold;
-                        MG_PopDiceReward_Num = UnityEngine.Random.Range(_ExtraBonusConfig.minGoldBonus, _ExtraBonusConfig.maxGoldBonus);
+                        RewardType = MG_RewardType.Gold;
+                        RewardNum = UnityEngine.Random.Range(_ExtraBonusConfig.minGoldBonus, _ExtraBonusConfig.maxGoldBonus);
                     }
                     else
                     {
-                        MG_PopDiceReward_Type = MG_PopRewardPanel_RewardType.ExtraCash;
-                        MG_PopDiceReward_Num = UnityEngine.Random.Range(_ExtraBonusConfig.minCashBonus, _ExtraBonusConfig.maxCashBonus);
+                        RewardType = MG_RewardType.Cash;
+                        RewardNum = UnityEngine.Random.Range(_ExtraBonusConfig.minCashBonus, _ExtraBonusConfig.maxCashBonus);
                     }
-                    MG_PopDiceReward_Mutiple = 1;
-                    MG_UIManager.Instance.ShowPopPanelAsync(MG_PopPanelType.ExtraRewardPanel);
+                    RewardMutiple = 1;
+                    MG_UIManager.Instance.ShowPopPanelAsync(MG_PopPanelType.GiftPanel);
                     break;
             }
         }
-        public int Random_DiceSlotsReward(out bool isGold)
+        public int Random_DiceSlotsReward(out bool isGold, out float mutiple)
         {
             int rewardRangeIndex = Get_Config_DiceRewardRangeIndex();
             MG_Dice_JackpotConfig _Dice_JackpotConfig = MG_Config.MG_Dice_JackpotConfigs[rewardRangeIndex];
@@ -392,23 +388,22 @@ namespace MiddleGround
             if (result < _Dice_JackpotConfig.noRewardRate)
             {
                 isGold = true;
+                mutiple = 0;
                 return 0;
             }
             else if (result < _Dice_JackpotConfig.noRewardRate + _Dice_JackpotConfig.goldRewardRate)
             {
                 isGold = true;
-                MG_PopDiceReward_Type = MG_PopRewardPanel_RewardType.Gold;
-                MG_PopDiceReward_Num = _Dice_JackpotConfig.goldPool[UnityEngine.Random.Range(0, _Dice_JackpotConfig.goldPool.Count)];
-                MG_PopDiceReward_Mutiple = _Dice_JackpotConfig.mutiplePool[UnityEngine.Random.Range(0, _Dice_JackpotConfig.mutiplePool.Count)];
-                return MG_PopDiceReward_Num;
+                int rewardGoldNum = _Dice_JackpotConfig.goldPool[UnityEngine.Random.Range(0, _Dice_JackpotConfig.goldPool.Count)];
+                mutiple = _Dice_JackpotConfig.mutiplePool[UnityEngine.Random.Range(0, _Dice_JackpotConfig.mutiplePool.Count)];
+                return rewardGoldNum;
             }
             else
             {
                 isGold = false;
-                MG_PopDiceReward_Type = MG_PopRewardPanel_RewardType.Cash;
-                MG_PopDiceReward_Num = _Dice_JackpotConfig.cashPool[UnityEngine.Random.Range(0, _Dice_JackpotConfig.cashPool.Count)];
-                MG_PopDiceReward_Mutiple = _Dice_JackpotConfig.mutiplePool[UnityEngine.Random.Range(0, _Dice_JackpotConfig.mutiplePool.Count)];
-                return MG_PopDiceReward_Num;
+                int rewardCashNum = _Dice_JackpotConfig.cashPool[UnityEngine.Random.Range(0, _Dice_JackpotConfig.cashPool.Count)];
+                mutiple = _Dice_JackpotConfig.mutiplePool[UnityEngine.Random.Range(0, _Dice_JackpotConfig.mutiplePool.Count)];
+                return rewardCashNum;
             }
         }
         public int Random_ScratchCardReward(out int rewardType)
@@ -418,7 +413,7 @@ namespace MiddleGround
             int cash = Get_Save_Cash();
             int sss = Get_Save_777();
             int scratchedTimes = MG_SaveManager.ScratchRewardCashAsTimeIndex - 1;
-            if (MG_SaveManager.ScratchedTimes == MG_SaveManager.ScratchRewardCashAsTimeIndex - 1 && MG_SaveManager.TodayExtraRewardTimes > 0)
+            if (MG_SaveManager.ScratchedTimes >= MG_SaveManager.ScratchRewardCashAsTimeIndex - 1 && MG_SaveManager.TodayExtraRewardTimes > 0)
             {
                 for (int i = 0; i < configCount; i++)
                 {
@@ -451,7 +446,7 @@ namespace MiddleGround
             }
 
             MG_SaveManager.ScratchedTimes++;
-            for(int i = 0; i < configCount; i++)
+            for (int i = 0; i < configCount; i++)
             {
                 if (i < configCount - 1)
                 {
@@ -512,7 +507,7 @@ namespace MiddleGround
             int count = MG_Config.MG_Wheel_Configs.Count;
             int total = 0;
             int currentTime = Get_Save_WheelTotalTimes() + 1;
-            for(int i = 0; i < count; i++)
+            for (int i = 0; i < count; i++)
             {
                 MG_Wheel_Config _Wheel_Config = MG_Config.MG_Wheel_Configs[i];
                 if (currentTime == _Wheel_Config.rewardThisWhereIndex)
@@ -528,7 +523,7 @@ namespace MiddleGround
                     if (Get_Save_Amazon() >= _Wheel_Config.maxCanGetValue)
                         _RandomInfo.hasThis = false;
                 }
-                if(_RandomInfo.hasThis)
+                if (_RandomInfo.hasThis)
                 {
                     _RandomInfo.startIndex = total;
                     total += _Wheel_Config.weight;
@@ -537,7 +532,7 @@ namespace MiddleGround
                 list_index_info.Add(_RandomInfo);
             }
             int resultNum = UnityEngine.Random.Range(0, total);
-            for(int i = 0; i < count; i++)
+            for (int i = 0; i < count; i++)
             {
                 MG_Wheel_RandomInfo _RandomInfo = list_index_info[i];
                 if (!_RandomInfo.hasThis) continue;
@@ -558,11 +553,11 @@ namespace MiddleGround
         Dictionary<int, MG_Slots_Config> dic_type_slotsConfigs = null;
         public MG_Slots_RewardType Random_SlotsReward(int useNum, out int num)
         {
-            if(dic_type_slotsConfigs is null)
+            if (dic_type_slotsConfigs is null)
             {
                 dic_type_slotsConfigs = new Dictionary<int, MG_Slots_Config>();
                 int count = MG_Config.MG_Slots_Configs.Count;
-                for(int i = 0; i < count; i++)
+                for (int i = 0; i < count; i++)
                 {
                     dic_type_slotsConfigs.Add((int)MG_Config.MG_Slots_Configs[i].rewardType, MG_Config.MG_Slots_Configs[i]);
                 }
@@ -586,8 +581,7 @@ namespace MiddleGround
             };
             MG_Slots_RewardType RewardCash(out int needNum)
             {
-                //needNum = (int)(useNum * UnityEngine.Random.Range(_SlotsCash.rewardPercentRangeMin, _SlotsCash.rewardPercentRangeMax));
-                needNum = UnityEngine.Random.Range(5, 11);
+                needNum = UnityEngine.Random.Range((int)(_SlotsCash.rewardPercentRangeMin * 100), (int)(_SlotsCash.rewardPercentRangeMax * 100));
                 return MG_Slots_RewardType.Cash;
             };
             MG_Slots_RewardType RewardDiamond(out int needNum)
@@ -726,7 +720,7 @@ namespace MiddleGround
             {
                 return RewardDiamond(out num);
             }
-            if (result < _SlotsGold.weight + _SlotsCash.weight+ _SlotsDimaond.weight + _SlotsGift.weight && Get_Save_Cash() < _SlotsGift.maxCanGetValue && MG_SaveManager.TodayExtraRewardTimes > 0)
+            if (result < _SlotsGold.weight + _SlotsCash.weight + _SlotsDimaond.weight + _SlotsGift.weight && Get_Save_Cash() < _SlotsGift.maxCanGetValue && MG_SaveManager.TodayExtraRewardTimes > 0)
             {
                 return RewardGift(out num);
             }
@@ -755,31 +749,12 @@ namespace MiddleGround
             }
             return RewardSS_Other(out num);
         }
-        public void Show_PopDoublePanel_Reward(MG_PopDoublePanel_RewardType rewardType,int rewardNum)
-        {
-            MG_PopDoublePanel_Type = rewardType;
-            MG_PopDoublePanel_Num = rewardNum;
-            MG_UIManager.Instance.ShowPopPanelAsync(MG_PopPanelType.DoublePanel);
-        }
-        public void Show_PopCashPanel_Reward(int rewardNum)
-        {
-            MG_PopCashPanel_Num = rewardNum;
-            MG_UIManager.Instance.ShowPopPanelAsync(MG_PopPanelType.CashoutPanel);
-        }
-        public int MG_SignRewardNum = 0;
-        public float MG_SignRewardMutiple = 1;
-        public void Show_SignRewardPanel_Reward(MG_PopRewardPanel_RewardType _rewardType,int _rewardNum,float _rewardMutiple)
-        {
-            MG_PopDiceReward_Type = _rewardType;
-            MG_SignRewardNum = _rewardNum;
-            MG_SignRewardMutiple = _rewardMutiple;
-            MG_UIManager.Instance.ShowPopPanelAsync(MG_PopPanelType.ExtraRewardPanel);
-        }
+        public MG_PopPanel_Tips _Tips;
         public void Show_PopTipsPanel(string content, float time = 1)
         {
             str_Tips = content;
             time_Tips = time;
-            MG_UIManager.Instance.ShowPopPanelAsync(MG_PopPanelType.Tips);
+            _Tips.OnEnter();
         }
 
         public void Play_Effect()
@@ -802,9 +777,47 @@ namespace MiddleGround
         }
         public int AddEnergyNatural(int value = 1)
         {
-           MG_SaveManager.DiceLife += value;
+            MG_SaveManager.DiceLife += value;
             MG_SaveManager.LastRevertEnergyDate = DateTime.Now;
             return MG_SaveManager.DiceLife;
+        }
+
+        readonly Dictionary<int, Sprite> dic_rewardType_sp = new Dictionary<int, Sprite>();
+        SpriteAtlas rewardSA = null;
+        public MG_RewardType RewardType = MG_RewardType.Gold;
+        public MG_RewardPanelType RewardPanelType = MG_RewardPanelType.AdClaim;
+        public int RewardNum = 1;
+        public float RewardMutiple = 1;
+        public Sprite Get_RewardSprite(MG_RewardType _RewardType)
+        {
+            if (dic_rewardType_sp.TryGetValue((int)_RewardType, out Sprite result))
+            {
+                return result;
+            }
+            else
+            {
+                if (rewardSA is null)
+                    rewardSA = MG_UIManager.Instance.GetSpriteAtlas((int)MG_PopPanelType.MostRewardPanel);
+                result = rewardSA.GetSprite("MG_Sprite_Reward_" + _RewardType);
+                dic_rewardType_sp.Add((int)_RewardType, result);
+                return result;
+            }
+        }
+        public void Show_MostRewardPanel(MG_RewardPanelType _RewardPanelType, MG_RewardType _RewardType, int rewardNum, float rewardMutiple = 1)
+        {
+            RewardPanelType = _RewardPanelType;
+            RewardType = _RewardType;
+            RewardNum = rewardNum;
+            RewardMutiple = rewardMutiple;
+            MG_UIManager.Instance.ShowPopPanelAsync(MG_PopPanelType.MostRewardPanel);
+        }
+        public void Show_CashRewardPanel(MG_RewardPanelType _RewardPanelType, int rewardNum, float rewardMutiple = 1)
+        {
+            RewardPanelType = _RewardPanelType;
+            RewardType = MG_RewardType.Cash;
+            RewardNum = rewardNum;
+            RewardMutiple = rewardMutiple;
+            MG_UIManager.Instance.ShowPopPanelAsync(MG_PopPanelType.CashRewardPanel);
         }
 
 
@@ -834,18 +847,18 @@ namespace MiddleGround
                 ("new_value", Get_Save_Gold().ToString()),
                 //累计体力
                 ("stage_id", Get_Save_TotalTimes().ToString()),
-                //广告描述
+                //广告id
                 ("id", adByWay),
                 //广告类型，0插屏1奖励视频
                 ("type", isRewardAd ? "1" : "0"),
                 //累计钻石
                 ("other_int1", Get_Save_Diamond().ToString()),
                 //累计777
-                ("other_int2",Get_Save_777().ToString()),
+                ("other_int2", Get_Save_777().ToString()),
                 //累计亚马逊
                 ("other_str1", Get_Save_Amazon().ToString()),
                 //累计水果
-                ("other_str2",Get_Save_Fruits().ToString())
+                ("other_str2", Get_Save_Fruits().ToString())
                 );
         }
         public void SendAdjustDiceEvent()
@@ -859,7 +872,7 @@ namespace MiddleGround
                 //累计金币
                 ("new_value", Get_Save_Gold().ToString()),
                 //总游戏次数
-                ("stage_id",Get_Save_TotalTimes().ToString() ),
+                ("stage_id", Get_Save_TotalTimes().ToString()),
                 //第几次骰子
                 ("id", Get_Save_DiceTotalTimes().ToString()),
                 //累计钻石
@@ -883,7 +896,7 @@ namespace MiddleGround
                 //累计金币
                 ("new_value", Get_Save_Gold().ToString()),
                 //总游戏次数
-                ("stage_id",Get_Save_TotalTimes().ToString() ),
+                ("stage_id", Get_Save_TotalTimes().ToString()),
                 //第几次转盘
                 ("id", Get_Save_WheelTotalTimes().ToString()),
                 //累计钻石
@@ -907,7 +920,7 @@ namespace MiddleGround
                 //累计金币
                 ("new_value", Get_Save_Gold().ToString()),
                 //总游戏次数
-                ("stage_id",Get_Save_TotalTimes().ToString() ),
+                ("stage_id", Get_Save_TotalTimes().ToString()),
                 //第几次老虎机
                 ("id", Get_Save_SlotsTotalTimes().ToString()),
                 //累计钻石
@@ -931,7 +944,7 @@ namespace MiddleGround
                 //累计金币
                 ("new_value", Get_Save_Gold().ToString()),
                 //总游戏次数
-                ("stage_id",Get_Save_TotalTimes().ToString() ),
+                ("stage_id", Get_Save_TotalTimes().ToString()),
                 //第几次刮刮乐
                 ("id", Get_Save_ScratchTotalTimes().ToString()),
                 //累计钻石
@@ -985,9 +998,9 @@ namespace MiddleGround
         {
             return MG_AudioManager.Instance.PlayOneShot(MG_PlayAudioType.Fly);
         }
-        public static bool ShowRV(Action callback,int clickTime,string des)
+        public static bool ShowRV(Action callback, int clickTime, string des)
         {
-            return Ads._instance.ShowRewardVideo(callback, clickTime,des);
+            return Ads._instance.ShowRewardVideo(callback, clickTime, des);
         }
         public static void ShowIV(Action callback, string des)
         {
@@ -1032,5 +1045,26 @@ namespace MiddleGround
         DiceGuid,
         ScratchGuid,
         SlotsGuid
+    }
+    public enum MG_RewardType
+    {
+        Gold,
+        Cash,
+        Diamond,
+        Amazon,
+        Cherry,
+        Orange,
+        Watermalen,
+        SSS,
+        ScratchTicket,
+        WheelTicket,
+    }
+    public enum MG_RewardPanelType
+    {
+        AdRandom,
+        AdClaim,
+        AdDouble,
+        FreeMutipleClaim,
+        FreeClaim,
     }
 }

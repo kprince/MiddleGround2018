@@ -16,17 +16,15 @@ namespace MiddleGround.UI
             {(int)MG_GamePanelType.DicePanel,"MG_Prefabs/MG_GamePanels/MG_GamePanel_Dice" },
             {(int)MG_GamePanelType.ScratchPanel,"MG_Prefabs/MG_GamePanels/MG_GamePanel_Scratch" },
             {(int)MG_GamePanelType.SlotsPanel,"MG_Prefabs/MG_GamePanels/MG_GamePanel_Slots" },
-            {(int)MG_PopPanelType.DiceRewardPanel,"MG_Prefabs/MG_PopPanels/MG_PopPanel_DiceReward" },
             {(int)MG_PopPanelType.ExtraRewardPanel,"MG_Prefabs/MG_PopPanels/MG_PopPanel_ExtraReward" },
-            {(int)MG_PopPanelType.SettingPanel,"MG_Prefabs/MG_PopPanels/MG_PopPanel_Setting" },
             {(int)MG_PopPanelType.BuyDiceEnergy,"MG_Prefabs/MG_PopPanels/MG_PopPanel_DiceBuyEnergy" },
             {(int)MG_PopPanelType.DiceSlotsPanel,"MG_Prefabs/MG_PopPanels/MG_PopPanel_DiceSlots" },
-            {(int) MG_PopPanelType.DoublePanel,"MG_Prefabs/MG_PopPanels/MG_PopPanel_Double"},
-            {(int)MG_PopPanelType.CashoutPanel,"MG_Prefabs/MG_PopPanels/MG_PopPanel_Cashout" },
-            {(int)MG_PopPanelType.Tips,"MG_Prefabs/MG_PopPanels/MG_PopPanel_Tips" },
             {(int)MG_PopPanelType.ShopPanel,"MG_Prefabs/MG_PopPanels/MG_PopPanel_Shop" },
             {(int)MG_PopPanelType.Rateus,"MG_Prefabs/MG_PopPanels/MG_PopPanel_Rateus" },
-            {(int)MG_PopPanelType.WheelPanel,"MG_Prefabs/MG_PopPanels/MG_PopPanel_Wheel" },
+            {(int)MG_GamePanelType.WheelPanel,"MG_Prefabs/MG_GamePanels/MG_GamePanel_Wheel" },
+            {(int)MG_PopPanelType.MostRewardPanel,"MG_Prefabs/MG_PopPanels/MG_PopPanel_Reward" },
+            {(int)MG_PopPanelType.CashRewardPanel,"MG_Prefabs/MG_PopPanels/MG_PopPanel_CashReward" },
+            {(int)MG_PopPanelType.GiftPanel,"MG_Prefabs/MG_PopPanels/MG_PopPanel_Gift" },
             {(int)MG_PopPanelType.SignPanel,"MG_Prefabs/MG_PopPanels/MG_PopPanel_Sign" },
         };
         readonly Dictionary<int, MG_UIBase> LoadedPanel_Dic = new Dictionary<int, MG_UIBase>();
@@ -36,12 +34,12 @@ namespace MiddleGround.UI
             {(int)MG_GamePanelType.DicePanel,"MG_SpriteAltas/MG_GamePanel_Dice" },
             {(int)MG_PopPanelType.ShopPanel,"MG_SpriteAltas/MG_PopPanel_Shop" },
             {(int)MG_PopPanelType.Random,"MG_SpriteAltas/MG_PopPanel_Random" },
-            {(int)MG_PopPanelType.SettingPanel,"MG_SpriteAltas/MG_PopPanel_Setting" },
             {(int)MG_GamePanelType.ScratchPanel,"MG_SpriteAltas/MG_GamePanel_Scratch" },
-            {(int)MG_PopPanelType.DiceSlotsPanel,"MG_SpriteAltas/MG_PopPanel_DiceSlots" },
-            {(int)MG_PopPanelType.DiceRewardPanel,"MG_SpriteAltas/MG_PopPanel_Reward" },
-            {(int)MG_PopPanelType.WheelPanel,"MG_SpriteAltas/MG_PopPanel_Wheel" },
-            {(int)MG_PopPanelType.SignPanel ,"MG_SpriteAltas/MG_PopPanel_Sign"},
+            {(int)MG_GamePanelType.WheelPanel,"MG_SpriteAltas/MG_GamePanel_Wheel" },
+            {(int)MG_GamePanelType.SlotsPanel ,"MG_SpriteAltas/MG_GamePanel_Slots"},
+            {(int)MG_PopPanelType.MostRewardPanel,"MG_SpriteAltas/MG_PopPanel_Reward" },
+            {(int)MG_PopPanelType.CashRewardPanel,"MG_SpriteAltas/MG_PopPanel_CashReward" },
+            {(int)MG_PopPanelType.SignPanel,"MG_SpriteAltas/MG_PopPanel_Sign" },
         };
         readonly Dictionary<int, SpriteAtlas> LoadedSpriteAtlas_Dic = new Dictionary<int, SpriteAtlas>();
         const string MenuPanelPath = "MG_Prefabs/MG_MenuPanel";
@@ -93,7 +91,7 @@ namespace MiddleGround.UI
                 {
                     if(loadedPopPanel is null)
                     {
-                        Debug.LogWarning((open ? "Show" : "Close") + " MG_PopPanel-" + panelIndex + " Error : loadedDic has key , but content is null.");
+                        Debug.LogWarning((open ? "Show" : "Close") + " MG_PopPanel-" + nextTask.t_panelType + " Error : loadedDic has key , but content is null.");
                         continue;
                     }
                     else
@@ -102,7 +100,7 @@ namespace MiddleGround.UI
                         {
                             if (open)
                             {
-                                Debug.LogWarning("Show MG_PopPanel-" + panelIndex + " Error : panel has showed.");
+                                Debug.LogWarning("Show MG_PopPanel-" + nextTask.t_panelType + " Error : panel has showed.");
                                 continue;
                             }
                             else
@@ -113,12 +111,14 @@ namespace MiddleGround.UI
                                     {
                                         MG_UIBase outPanel = Panel_Stack.Pop();
                                         yield return outPanel.OnExit();
-                                        if (MG_Manager.Instance.next_GuidType != MG_Guid_Type.Null)
-                                            MG_Manager.Instance.isGuid = true;
                                         if (Panel_Stack.Count > 0)
                                             Panel_Stack.Peek().OnResume();
                                         else
+                                        {
                                             MenuPanel.OnResume();
+                                            if (Current_GamePanel is object)
+                                                Current_GamePanel.OnResume();
+                                        }
                                         if (outPanel == loadedPopPanel)
                                             break;
                                     }
@@ -140,14 +140,18 @@ namespace MiddleGround.UI
                                 if (Panel_Stack.Count > 0)
                                     Panel_Stack.Peek().OnPause();
                                 else
+                                {
                                     MenuPanel.OnPause();
+                                    if (Current_GamePanel is object)
+                                        Current_GamePanel.OnPause();
+                                }
                                 loadedPopPanel.transform.SetAsLastSibling();
                                 Panel_Stack.Push(loadedPopPanel);
                                 yield return loadedPopPanel.OnEnter();
                             }
                             else
                             {
-                                Debug.LogWarning("Close MG_PopPanel-" + panelIndex + " Error : panel has not show.");
+                                Debug.LogWarning("Close MG_PopPanel-" + nextTask.t_panelType + " Error : panel has not show.");
                                 continue;
                             }
                         }
@@ -161,7 +165,7 @@ namespace MiddleGround.UI
                         {
                             if (string.IsNullOrEmpty(panelPath))
                             {
-                                Debug.LogWarning("Show MG_PopPanel-" + panelIndex + " Error : panelPathDic content is null or empty.");
+                                Debug.LogWarning("Show MG_PopPanel-" + nextTask.t_panelType + " Error : panelPathDic content is null or empty.");
                                 continue;
                             }
                             else
@@ -175,7 +179,11 @@ namespace MiddleGround.UI
                                 if (Panel_Stack.Count > 0)
                                     Panel_Stack.Peek().OnPause();
                                 else
+                                {
                                     MenuPanel.OnPause();
+                                    if (Current_GamePanel is object)
+                                        Current_GamePanel.OnPause();
+                                }
                                 MG_UIBase nextShowPanel = Instantiate(Resources.Load<GameObject>(panelPath), PopPanelRoot).GetComponent<MG_UIBase>();
                                 nextShowPanel.transform.SetAsLastSibling();
                                 Panel_Stack.Push(nextShowPanel);
@@ -185,18 +193,121 @@ namespace MiddleGround.UI
                         }
                         else
                         {
-                            Debug.LogWarning("Show MG_PopPanel-" + panelIndex + " Error : panelPathDic content is null or empty.");
+                            Debug.LogWarning("Show MG_PopPanel-" + nextTask.t_panelType + " Error : panelPathDic content is null or empty.");
                             continue;
                         }
                     }
                     else
                     {
-                        Debug.LogWarning("Close MG_PopPanel-" + panelIndex + " Error : panel has not loaded or show.");
+                        Debug.LogWarning("Close MG_PopPanel-" + nextTask.t_panelType + " Error : panel has not loaded or show.");
                         continue;
                     }
                 }
             }
             Cor_PopPanelTask = null;
+        }
+        [Obsolete("use ShowPopPanelAsync instead of.", true)]
+        public bool ShowPopPanel(MG_PopPanelType _PanelType)
+        {
+            int panelIndex = (int)_PanelType;
+            if (LoadedPanel_Dic.TryGetValue(panelIndex, out MG_UIBase loadedPopPanel))
+            {
+                if (loadedPopPanel is null)
+                {
+                    LoadedPanel_Dic.Remove(panelIndex);
+                    Debug.LogWarning("Show MG_PopPanel-" + _PanelType + " Error : loadedDic has key , but content is null.");
+                    return false;
+                }
+                else
+                {
+                    if (Panel_Stack.Contains(loadedPopPanel))
+                    {
+                        Debug.LogWarning("Show MG_PopPanel-" + _PanelType + " Error : panel has showed.");
+                        return false;
+                    }
+                    else
+                    {
+                        if (Panel_Stack.Count > 0)
+                        {
+                            Panel_Stack.Peek().OnPause();
+                        }
+                        loadedPopPanel.transform.SetAsLastSibling();
+                        Panel_Stack.Push(loadedPopPanel);
+                        loadedPopPanel.OnEnter();
+                    }
+                }
+            }
+            else
+            {
+                if (Type_Path_Dic.TryGetValue(panelIndex, out string panelPath))
+                {
+                    if (string.IsNullOrEmpty(panelPath))
+                    {
+                        Debug.LogWarning("Show MG_PopPanel-" + _PanelType + " Error : panelPathDic content is null or empty.");
+                        return false;
+                    }
+                    else
+                    {
+                        MG_UIBase nextShowPanel = Instantiate(Resources.Load<GameObject>(panelPath), PopPanelRoot).GetComponent<MG_UIBase>();
+                        if (Panel_Stack.Count > 0)
+                        {
+                            Panel_Stack.Peek().OnPause();
+                        }
+                        nextShowPanel.transform.SetAsLastSibling();
+                        Panel_Stack.Push(nextShowPanel);
+                        LoadedPanel_Dic.Add(panelIndex, nextShowPanel);
+                        nextShowPanel.OnEnter();
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning("Show MG_PopPanel-" + _PanelType + " Error : panelPathDic content is null or empty.");
+                    return false;
+                }
+            }
+            return true;
+        }
+        [Obsolete("use ClosePopPanelAsync instead of.", true)]
+        public bool ClosePopPanel(MG_PopPanelType _PanelType)
+        {
+            int panelIndex = (int)_PanelType;
+            if (LoadedPanel_Dic.TryGetValue(panelIndex, out MG_UIBase loadedPopPanel))
+            {
+                if (loadedPopPanel is null)
+                {
+                    LoadedPanel_Dic.Remove(panelIndex);
+                    Debug.LogWarning("Close MG_PopPanel-" + _PanelType + " Error : loadedDic has key , but content is null.");
+                    return false;
+                }
+                if (Panel_Stack.Contains(loadedPopPanel))
+                {
+                    while (true)
+                    {
+                        if (Panel_Stack.Count > 0)
+                        {
+                            MG_UIBase outPanel = Panel_Stack.Pop();
+                            outPanel.OnExit();
+                            if (Panel_Stack.Count > 0)
+                                Panel_Stack.Peek().OnResume();
+                            if (outPanel == loadedPopPanel)
+                                break;
+                        }
+                        else
+                            break;
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning("Close MG_PopPanel-" + _PanelType + " Error : panel has not show.");
+                    return false;
+                }
+            }
+            else
+            {
+                Debug.LogWarning("Close MG_PopPanel-" + _PanelType + " Error : panel has not show.");
+                return false;
+            }
+            return true;
         }
         public bool CloseTopPopPanelAsync()
         {
@@ -268,42 +379,18 @@ namespace MiddleGround.UI
             }
             return true;
         }
-        public void ShowMenuPanel(MG_GamePanelType startGamePanel = MG_GamePanelType.DicePanel)
+        public bool ShowMenuPanel(MG_GamePanelType startPanel)
         {
             if(MenuPanel is null)
             {
-                MG_SaveManager.Current_GamePanel = (int)startGamePanel;
+                MG_SaveManager.Current_GamePanel = (int)startPanel;
                 MenuPanel = Instantiate(Resources.Load<GameObject>(MenuPanelPath), MenuPanelRoot).GetComponent<MG_MenuPanel>();
                 StartCoroutine(MenuPanel.OnEnter());
+                ShowGamePanel(startPanel);
+                return true;
             }
-            else
-            {
-                StartCoroutine(MenuPanel.OnEnter());
-            }
-            switch (startGamePanel)
-            {
-                case MG_GamePanelType.DicePanel:
-                    MenuPanel.OnDiceButtonClick();
-                    break;
-                case MG_GamePanelType.ScratchPanel:
-                    MenuPanel.OnScratchButtonClick();
-                    break;
-                case MG_GamePanelType.SlotsPanel:
-                    MenuPanel.OnSlotsButtonClick();
-                    break;
-            }
-        }
-        public void CloseMenuPanel()
-        {
-            if(MenuPanel is object)
-            {
-                StartCoroutine(MenuPanel.OnExit());
-                if (Current_GamePanel is object)
-                {
-                    StartCoroutine(Current_GamePanel.OnExit());
-                    Current_GamePanel = null;
-                }
-            }
+            Debug.LogWarning("Show MG_MenuPanel Error : panel has show.");
+            return false;
         }
         public void FlyEffectTo_MenuTarget(Vector3 startPos,MG_MenuFlyTarget flyTarget,int num)
         {
@@ -317,9 +404,19 @@ namespace MiddleGround.UI
         {
             MenuPanel.UpdateGoldText();
         }
-        public void UpdateMenuPanel_ScratchTicketText()
+        MG_GamePanel_Scratch _Scratch = null;
+        public void Update_ScratchTicketText()
         {
             MenuPanel.UpdateScratchTicketText();
+            if(_Scratch is null)
+            {
+                if(LoadedPanel_Dic.TryGetValue((int)MG_GamePanelType.ScratchPanel,out MG_UIBase _UIBase))
+                {
+                    _Scratch = _UIBase as MG_GamePanel_Scratch;
+                }
+            }
+            if (_Scratch is object)
+                _Scratch.UpdateScratchTicketNumText();
         }
         public void UpdateMenuPanel_SpecialTokenText()
         {
@@ -340,10 +437,23 @@ namespace MiddleGround.UI
         }
         public void UpdateWheelTicketText()
         {
-            MG_PopPanel_Wheel _PopPanel_Wheel = Get_UIPanel((int)MG_PopPanelType.WheelPanel) as MG_PopPanel_Wheel;
+            MG_PopPanel_Wheel _PopPanel_Wheel = Get_UIPanel((int)MG_GamePanelType.WheelPanel) as MG_PopPanel_Wheel;
             if (_PopPanel_Wheel is null)
                 return;
             _PopPanel_Wheel.UpdateWheelTicketShow();
+        }
+        MG_GamePanel_Slots _Slots = null;
+        public void UpdateSlotsPanel_FruitText()
+        {
+            if(_Slots is null)
+            {
+                if(LoadedPanel_Dic.TryGetValue((int)MG_GamePanelType.SlotsPanel,out MG_UIBase _UIBase))
+                {
+                    _Slots = _UIBase as MG_GamePanel_Slots;
+                }
+            }
+            if (_Slots is object)
+                _Slots.UpdateFruitNumText();
         }
         public void UpdateWheelRP()
         {
@@ -351,7 +461,7 @@ namespace MiddleGround.UI
         }
         public void UpdateSignRP()
         {
-            MenuPanel.UpdateSingRP();
+            MenuPanel.UpdateSignRP();
         }
         public SpriteAtlas GetSpriteAtlas(int index)
         {
@@ -413,26 +523,24 @@ namespace MiddleGround.UI
     }
     public enum MG_PopPanelType
     {
-        WheelPanel = 3,
-        SignPanel = 4,
-        SettingPanel = 5,
-        ExchangePanel = 6,
-        DiceRewardPanel = 7,
-        DiceSlotsPanel = 8,
-        ExtraRewardPanel = 9,
-        ShopPanel = 10,
-        Random = 11,
-        BuyDiceEnergy = 12,
-        DoublePanel = 13,
-        CashoutPanel = 14,
-        Tips = 15,
-        Rateus = 16,
+        ExchangePanel = 4,
+        DiceSlotsPanel = 5,
+        ExtraRewardPanel = 6,
+        ShopPanel = 7,
+        Random = 8,
+        BuyDiceEnergy = 9,
+        Rateus = 10,
+        MostRewardPanel = 11,
+        CashRewardPanel = 12,
+        GiftPanel = 13,
+        SignPanel = 14,
     }
     public enum MG_GamePanelType
     {
         ScratchPanel = 0,
         DicePanel = 1,
-        SlotsPanel = 2
+        SlotsPanel = 2,
+        WheelPanel = 3,
     }
     public enum MG_MenuFlyTarget
     {

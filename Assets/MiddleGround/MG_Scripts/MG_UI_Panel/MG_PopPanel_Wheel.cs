@@ -25,28 +25,22 @@ namespace MiddleGround.UI
         RectTransform rect_speedup;
 
         public Button btn_Speedup;
-        public Button btn_Close;
         MG_Wheel_RewardType[] _Wheel_RewardTypes;
         int[] _Wheel_RewardNums;
         protected override void Awake()
         {
             base.Awake();
 
-            btn_Close.onClick.AddListener(OnCloseClick);
             btn_Speedup.onClick.AddListener(OnSpinClick);
             MG_UIManager.Instance.MenuPanel.dic_flytarget_transform.Add((int)MG_MenuFlyTarget.WheelTicket, text_wheelticket.transform);
             rect_speedup = text_speedup.GetComponent<RectTransform>();
 
-            SpriteAtlas wheelSA = MG_UIManager.Instance.GetSpriteAtlas((int)MG_PopPanelType.WheelPanel);
+            SpriteAtlas wheelSA = MG_UIManager.Instance.GetSpriteAtlas((int)MG_GamePanelType.WheelPanel);
             bool packB = MG_Manager.Instance.Get_Save_PackB();
             int typeCount = (int)MG_Wheel_RewardType.TypeNum;
             for(int i = 0; i < typeCount; i++)
             {
                 string name = ((MG_Wheel_RewardType)i).ToString();
-                if (i == (int)MG_Wheel_RewardType.Cash)
-                {
-                    name += packB ? "B" : "A";
-                }
                 dic_type_sprite.Add(i, wheelSA.GetSprite("MG_Sprite_Wheel_" + name));
             }
 
@@ -82,7 +76,7 @@ namespace MiddleGround.UI
             {
                 if (MG_Manager.Instance.Get_Save_WheelTickets() <= 0)
                 {
-                    MG_UIManager.Instance.ClosePopPanelAsync(MG_PopPanelType.WheelPanel);
+                    MG_Manager.Instance.Show_PopTipsPanel("You have no ticket.");
                 }
                 else
                 {
@@ -143,7 +137,7 @@ namespace MiddleGround.UI
                         float angleZ = rect_wheel.localEulerAngles.z % 360;
                         if (angleZ < 0)
                             angleZ += 360;
-                        if (Mathf.Abs(angleZ - endAngleZ) < 3)
+                        if (Mathf.Abs(angleZ - endAngleZ) < 2)
                         {
                             rect_wheel.localEulerAngles = new Vector3(0, 0, endAngleZ);
                             isStop = true;
@@ -171,32 +165,26 @@ namespace MiddleGround.UI
             switch (_Wheel_RewardTypes[rewardIndex])
             {
                 case MG_Wheel_RewardType.Gold:
-                    MG_Manager.Instance.Show_PopDoublePanel_Reward(MG_PopDoublePanel_RewardType.Gold, _Wheel_RewardNums[rewardIndex]);
+                    MG_Manager.Instance.Show_MostRewardPanel(MG_RewardPanelType.AdDouble, MG_RewardType.Gold, _Wheel_RewardNums[rewardIndex]);
                     break;
                 case MG_Wheel_RewardType.Cash:
-                    MG_Manager.Instance.Show_PopCashPanel_Reward(_Wheel_RewardNums[rewardIndex]);
+                    MG_Manager.Instance.Show_CashRewardPanel(MG_RewardPanelType.AdClaim, _Wheel_RewardNums[rewardIndex]);
                     break;
                 case MG_Wheel_RewardType.Scratch:
-                    MG_Manager.Instance.Show_PopDoublePanel_Reward(MG_PopDoublePanel_RewardType.Scratch, _Wheel_RewardNums[rewardIndex]);
+                    MG_Manager.Instance.Show_MostRewardPanel(MG_RewardPanelType.AdDouble, MG_RewardType.ScratchTicket, _Wheel_RewardNums[rewardIndex]);
                     break;
                 case MG_Wheel_RewardType.Gift:
                     MG_Manager.Instance.Random_DiceOrExtraReward(MG_PopRewardPanel_RewardType.Extra);
                     break;
                 case MG_Wheel_RewardType.Amazon:
-                    MG_Manager.Instance.Show_PopDoublePanel_Reward(MG_PopDoublePanel_RewardType.Amazon, _Wheel_RewardNums[rewardIndex]);
+                    MG_Manager.Instance.Show_MostRewardPanel(MG_RewardPanelType.AdClaim, MG_RewardType.Amazon, _Wheel_RewardNums[rewardIndex]);
                     break;
                 case MG_Wheel_RewardType.WheelTicket:
-                    MG_Manager.Instance.Show_PopDoublePanel_Reward(MG_PopDoublePanel_RewardType.WheelTicket, _Wheel_RewardNums[rewardIndex]);
+                    MG_Manager.Instance.Show_MostRewardPanel(MG_RewardPanelType.AdDouble, MG_RewardType.WheelTicket, _Wheel_RewardNums[rewardIndex]);
                     break;
             }
             CheckLock();
             isRotating = false;
-        }
-        void OnCloseClick()
-        {
-            MG_Manager.Play_ButtonClick();
-            if (isRotating) return;
-            MG_UIManager.Instance.ClosePopPanelAsync(MG_PopPanelType.WheelPanel);
         }
 
 
@@ -206,47 +194,25 @@ namespace MiddleGround.UI
             UpdateWheelTicketShow();
             CheckLock();
 
-            Transform transAll = transform.GetChild(1);
-            transAll.localScale = new Vector3(0.8f, 0.8f, 1);
-            canvasGroup.alpha = 0.8f;
-            canvasGroup.blocksRaycasts = true;
-            while (transAll.localScale.x < 1)
-            {
-                yield return null;
-                float addValue = Time.unscaledDeltaTime * 2;
-                transAll.localScale += new Vector3(addValue, addValue);
-                canvasGroup.alpha += addValue;
-            }
-            transAll.localScale = Vector3.one;
             canvasGroup.alpha = 1;
-            canvasGroup.interactable = true;
+            canvasGroup.blocksRaycasts = true;
+            yield return null;
         }
 
         public override IEnumerator OnExit()
         {
-            Transform transAll = transform.GetChild(1);
-            canvasGroup.interactable = false;
-            while (transAll.localScale.x > 0.8f)
-            {
-                yield return null;
-                float addValue = Time.unscaledDeltaTime * 2;
-                transAll.localScale -= new Vector3(addValue, addValue);
-                canvasGroup.alpha -= addValue;
-            }
-            transAll.localScale = new Vector3(0.8f, 0.8f, 1);
             MG_UIManager.Instance.UpdateWheelRP();
             canvasGroup.alpha = 0;
             canvasGroup.blocksRaycasts = false;
+            yield return null;
         }
 
         public override void OnPause()
         {
-            btn_Close.gameObject.SetActive(false);
         }
 
         public override void OnResume()
         {
-            btn_Close.gameObject.SetActive(true);
         }
         string GetShowNumString(int num)
         {

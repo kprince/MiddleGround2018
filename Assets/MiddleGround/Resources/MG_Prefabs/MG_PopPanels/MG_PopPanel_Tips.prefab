@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1730894968080323447}
   - component: {fileID: 1730894968080323445}
-  - component: {fileID: 8911021953572599989}
+  - component: {fileID: 8189945364689494772}
   m_Layer: 5
   m_Name: MG_TipsPanel_Base
   m_TagString: Untagged
@@ -46,7 +46,7 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1730894968080323400}
   m_CullTransparentMesh: 0
---- !u!114 &8911021953572599989
+--- !u!114 &8189945364689494772
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -135,7 +135,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2686ff5507748c2478b50a603d1f1555, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  text_content: {fileID: 6024451914903584838}
+  text_content: {fileID: 4561631083826943319}
 --- !u!1 &1730894969050764321
 GameObject:
   m_ObjectHideFlags: 0
@@ -146,7 +146,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1730894969050764320}
   - component: {fileID: 1730894969050764334}
-  - component: {fileID: 6024451914903584838}
+  - component: {fileID: 4561631083826943319}
   m_Layer: 5
   m_Name: MG_TipsPanel_Des
   m_TagString: Untagged
@@ -181,7 +181,7 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1730894969050764321}
   m_CullTransparentMesh: 0
---- !u!114 &6024451914903584838
+--- !u!114 &4561631083826943319
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -223,7 +223,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1730894969887296553}
   - component: {fileID: 1730894969887296599}
-  - component: {fileID: 7270211964846141211}
+  - component: {fileID: 4321358531208176002}
   m_Layer: 5
   m_Name: MG_TipsPanel_BG
   m_TagString: Untagged
@@ -259,7 +259,7 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1730894969887296554}
   m_CullTransparentMesh: 0
---- !u!114 &7270211964846141211
+--- !u!114 &4321358531208176002
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

@@ -43,7 +43,7 @@ public class Ads : MonoBehaviour
 		rewardCallback = rewardedCallback;
 #if UNITY_EDITOR
 		rewardedCallback();
-		Debug.Log("Show " + des + " of rewarded ad.");
+		Debug.Log("Show RV : 【" + des + "】");
 		return true;
 #endif
 #if UNITY_IOS
@@ -69,21 +69,21 @@ public class Ads : MonoBehaviour
 	{
 		popCallback = callback;
 #if UNITY_EDITOR
-		callback();
-		Debug.Log("Show " + des + " of interstial ad.");
+		callback?.Invoke();
+		Debug.Log("Show IV : 【" + des + "】");
 		return;
 #endif
 		adDes = des;
 #if UNITY_IOS
 		if (!MG_Manager.Instance.Get_Save_PackB()) 
 		{
-			callback();
+			callback?.Invoke();
 			return;
 		}
 #endif
 		if (Time.realtimeSinceStartup - interstialLasttime < 30)
-        {
-			callback();
+		{
+			callback?.Invoke();
 			return;
         }
 		if (IronSource.Agent.isInterstitialReady())
@@ -93,7 +93,7 @@ public class Ads : MonoBehaviour
 		}
 		else
 		{
-			callback();
+			callback?.Invoke();
 			MG_Manager.Instance.SendAdjustPlayAdEvent(false, false, adDes);
 		}
 	}
@@ -131,8 +131,7 @@ public class Ads : MonoBehaviour
 		if (clickAdTime >= 2)
 		{
 			MG_UIManager.Instance.CloseTopPopPanelAsync();
-			noticeText.text = text;
-			yield return new WaitForSeconds(2 * Time.timeScale);
+			MG_Manager.Instance.Show_PopTipsPanel(text);
 		}
 		notice.SetActive(false);
 	}
@@ -153,6 +152,8 @@ public class Ads : MonoBehaviour
 	Action popCallback;
 	public void InvokePopAd()
     {
-		popCallback();
+		popCallback?.Invoke();
     }
 }
+//FB A:774613690010415
+//FB IOS:308946513807140

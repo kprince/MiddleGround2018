@@ -9,7 +9,6 @@ namespace MiddleGround.UI
 {
     public class MG_GamePanel_Scratch : MG_UIBase
     {
-        public Image img_BG;
         public Image[] img_Cards = new Image[9];
         private Transform[] trans_Cards = new Transform[9];
         public Image img_TargetCard;
@@ -24,13 +23,13 @@ namespace MiddleGround.UI
         public Button btn_AD;
         public GameObject go_AddToken;
         public GameObject go_Lock;
-        public GameObject go_BigPrize;
         public GameObject go_SpecialRewardCard;
         public Text text_RewardNum;
         public Text text_BigPrizeNum;
         public Text text_LockDes;
         public Text text_btn;
         public Text text_LockTime;
+        public Text text_ScratchTicketNum;
 
         const int CardSpriteCount = 10;
         Dictionary<int, Sprite> dic_index_TargetCard = new Dictionary<int, Sprite>();
@@ -55,17 +54,9 @@ namespace MiddleGround.UI
             menuAtlas = MG_UIManager.Instance.GetMenuSpriteAtlas();
             sp_sss = shopAtlas.GetSprite("MG_Sprite_Shop_SSS");
             sp_gold = shopAtlas.GetSprite("MG_Sprite_Shop_Gold");
-            bool isPackB = MG_Manager.Instance.Get_Save_PackB();
-            if (isPackB)
-            {
-                sp_cash = shopAtlas.GetSprite("MG_Sprite_Shop_CashB");
-                sp_dollar = menuAtlas.GetSprite("MG_Sprite_Menu_CashB");
-            }
-            else
-            {
-                sp_cash = shopAtlas.GetSprite("MG_Sprite_Shop_CashA");
-                sp_dollar = menuAtlas.GetSprite("MG_Sprite_Menu_CashA");
-            }
+            sp_cash = shopAtlas.GetSprite("MG_Sprite_Shop_Cash");
+            bool packB = MG_Manager.Instance.Get_Save_PackB();
+            sp_dollar = menuAtlas.GetSprite("MG_Sprite_Menu_Cash" + (packB ? "B" : "A"));
             img_BigPrizeIcon.sprite = sp_dollar;
             StartAwake();
 
@@ -73,12 +64,14 @@ namespace MiddleGround.UI
             f_halfW = rect_Mask.sizeDelta.x * 0.5f;
             f_halfH = rect_Mask.sizeDelta.y * 0.5f;
             cam_brush.aspect = rect_Mask.sizeDelta.x / rect_Mask.sizeDelta.y;
+            Material maskMat = img_Mask.material;
+            maskMat.SetFloat(Mat_Alpha_Key, 1);
+            hasRefesh = true;
 
         }
         private Vector3 VectorTransfer(Vector2 point)
         {
-            Vector2 screenpos;
-            RectTransformUtility.ScreenPointToLocalPointInRectangle(rect_Mask, point, null, out screenpos);
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(rect_Mask, point, null, out Vector2 screenpos);
             var viewPos = new Vector2((screenpos.x + f_halfW) / (2 * f_halfW), (screenpos.y + f_halfH) / (2 * f_halfH));
             var pos = cam_brush.ViewportToWorldPoint(viewPos);
             return pos + Vector3.forward;
@@ -109,7 +102,7 @@ namespace MiddleGround.UI
             {
                 btn_AD.gameObject.SetActive(false);
                 go_Lock.SetActive(false);
-                cor_guidHandle = StartCoroutine(AutoMoveHandle());
+                StartCoroutine("AutoMoveHandle");
                 text_btn.text = "FREE";
             }
             else
@@ -128,7 +121,7 @@ namespace MiddleGround.UI
             btn_AD.gameObject.SetActive(false);
             go_Lock.SetActive(false);
             isLock = false;
-            cor_guidHandle = StartCoroutine(AutoMoveHandle());
+            StartCoroutine("AutoMoveHandle");
         }
         void ClearBrush()
         {
@@ -142,16 +135,15 @@ namespace MiddleGround.UI
         }
         bool isLock = false;
         bool isNoTicket = false;
-        Coroutine cor_guidHandle;
         public override IEnumerator OnEnter()
         {
             CheckWehtherLock();
             CheckWetherNoTickets();
-            img_BG.sprite = MG_Manager.Instance.Get_GamePanelBg();
+            UpdateScratchTicketNumText();
             canvasGroup.alpha = 1;
             canvasGroup.blocksRaycasts = true;
             if (notTouch && !isNoTicket && !isLock)
-                cor_guidHandle = StartCoroutine(AutoMoveHandle());
+                StartCoroutine("AutoMoveHandle");
             yield return null;
             clickTime = 0;
         }
@@ -160,8 +152,7 @@ namespace MiddleGround.UI
         {
             canvasGroup.alpha = 0;
             canvasGroup.blocksRaycasts = false;
-            if (cor_guidHandle is object)
-                StopCoroutine(cor_guidHandle);
+            StopCoroutine("AutoMoveHandle");
             yield return null;
         }
 
@@ -171,6 +162,9 @@ namespace MiddleGround.UI
 
         public override void OnResume()
         {
+            Material maskMat = img_Mask.material;
+            maskMat.SetFloat(Mat_Alpha_Key, 1);
+            OnRefresh();
         }
         Sprite GetTargetSprite(int index)
         {
@@ -283,17 +277,25 @@ namespace MiddleGround.UI
         {
             if (isClearing) return;
             notTouch = false;
-            StopCoroutine(cor_guidHandle);
+            hasRefesh = false;
+            StopCoroutine("AutoMoveHandle");
             if (trans_Handle.gameObject.activeSelf)
                 trans_Handle.gameObject.SetActive(false);
             pos.z = 0;
-            if (go_BigPrize.activeInHierarchy)
-                go_BigPrize.SetActive(false);
             trans_brush.GetComponent<TrailRenderer>().Clear();
             trans_brush.position = VectorTransfer(pos);
             lastPos = pos;
             trans_brush.gameObject.SetActive(true);
-            CheckAllCardShow(pos);
+            CheckAllCardShowWithPoint(pos);
+            if (trans_UnShow.Count <= 2)
+            {
+                isClearing = true;
+                MG_Manager.Instance.SendAdjustScratchEvent();
+                if (MG_SaveManager.ScratchTotalPlayTimes > 0 && MG_SaveManager.ScratchTotalPlayTimes % 2 == 0)
+                    MG_Manager.ShowIV(OnPopAdCallback, "scratch per 2 time iv");
+                else
+                    OnPopAdCallback();
+            }
         }
         Vector3 lastPos = Vector3.zero;
         public void SetBrushPos(Vector3 pos)
@@ -301,7 +303,7 @@ namespace MiddleGround.UI
             if (isClearing) return;
             pos.z = 0;
             trans_brush.position = VectorTransfer(pos);
-            CheckAllCardShow(pos);
+            CheckAllCardShowWithLine(pos);
             lastPos = pos;
             if (trans_UnShow.Count <= 2)
             {
@@ -342,18 +344,16 @@ namespace MiddleGround.UI
                     switch (rewardType)
                     {
                         case -1:
-                            MG_Manager.Instance.Show_PopDoublePanel_Reward(MG_PopDoublePanel_RewardType.Gold, rewardNum);
+                            MG_Manager.Instance.Show_MostRewardPanel(MG_RewardPanelType.AdDouble, MG_RewardType.Gold, rewardNum);
                             break;
                         case -2:
-                            MG_Manager.Instance.Show_PopCashPanel_Reward(rewardNum);
+                            MG_Manager.Instance.Show_CashRewardPanel(MG_RewardPanelType.AdClaim, rewardNum);
                             break;
                         case -3:
-                            MG_Manager.Instance.Show_PopDoublePanel_Reward(MG_PopDoublePanel_RewardType.SSS, rewardNum);
+                            MG_Manager.Instance.Show_MostRewardPanel(MG_RewardPanelType.AdClaim, MG_RewardType.SSS, rewardNum);
                             break;
                     }
-                    maskMat.SetFloat(Mat_Alpha_Key, 1);
                     MG_Manager.Instance.Add_Save_ScratchTicket(-1);
-                    OnRefresh();
                     break;
                 }
             }
@@ -389,7 +389,7 @@ namespace MiddleGround.UI
             }
         }
         readonly List<Transform> trans_UnShow = new List<Transform>();
-        bool CheckAllCardShow(Vector3 pos)
+        bool CheckAllCardShowWithLine(Vector3 pos)
         {
             bool showAll = false;
             int count = trans_UnShow.Count;
@@ -399,6 +399,27 @@ namespace MiddleGround.UI
             for(int i = 0; i < count; i++)
             {
                 float distance = DistancePoint2Line(trans_UnShow[i].position, pos, lastPos, k, c);
+                if (distance < 130)
+                {
+                    willRemoveTrans.Add(trans_UnShow[i]);
+                }
+            }
+            foreach (Transform index in willRemoveTrans)
+                trans_UnShow.Remove(index);
+            if (trans_UnShow.Count == 0)
+            {
+                showAll = true;
+            }
+            return showAll;
+        }
+        bool CheckAllCardShowWithPoint(Vector3 pos)
+        {
+            bool showAll = false;
+            int count = trans_UnShow.Count;
+            List<Transform> willRemoveTrans = new List<Transform>();
+            for (int i = 0; i < count; i++)
+            {
+                float distance = Vector3.Distance(pos, trans_UnShow[i].position);
                 if (distance < 130)
                 {
                     willRemoveTrans.Add(trans_UnShow[i]);
@@ -473,16 +494,19 @@ namespace MiddleGround.UI
                 isNoTicket = false;
         }
         bool notTouch = true;
+        bool hasRefesh = false;
         void OnRefresh()
         {
+            if (hasRefesh) return;
+            hasRefesh = true;
             RandomCards();
             ClearBrush();
             CheckWehtherLock();
             CheckWetherNoTickets();
-            go_BigPrize.SetActive(true);
             notTouch = true;
+            StopCoroutine("AutoMoveHandle");
             if (notTouch && !isNoTicket && !isLock)
-                cor_guidHandle = StartCoroutine(AutoMoveHandle());
+                StartCoroutine("AutoMoveHandle");
         }
         void StartAwake()
         {
@@ -497,7 +521,6 @@ namespace MiddleGround.UI
             }
             CheckWehtherLock();
             CheckWetherNoTickets();
-            img_BG.sprite = MG_Manager.Instance.Get_GamePanelBg();
 
             rewardNum = MG_SaveManager.ScratchCardRewardNum;
             rewardType = MG_SaveManager.ScratchCardRewardType;
@@ -564,8 +587,11 @@ namespace MiddleGround.UI
                         text_BigPrizeNum.text = "0";
                         break;
                 }
-                go_BigPrize.SetActive(true);
             }
+        }
+        public void UpdateScratchTicketNumText()
+        {
+            text_ScratchTicketNum.text = MG_Manager.Instance.Get_Save_ScratchTicket().ToString();
         }
         IEnumerator AutoMoveHandle()
         {

@@ -17,11 +17,9 @@ namespace MiddleGround.UI
         public Text text_GiftNum;
 
         public Image img_Dice;
-        public Image img_BG;
         Animator ac_Dice;
         readonly Sprite[] sp_DiceResults = new Sprite[6];
         List<Sprite> sp_BrickTypes = new List<Sprite>();
-        Dictionary<int, Sprite> dic_LoadedEmptyBricks = new Dictionary<int, Sprite>();
         Sprite sp_oldbrick;
 
         Dictionary<int, MG_Dice_BrickConfig> dic_DiceConfig;
@@ -43,17 +41,13 @@ namespace MiddleGround.UI
                 sp_DiceResults[i] = DiceAltas.GetSprite("MG_Sprites_Dice" + i);
             }
             bool packB = MG_Manager.Instance.Get_Save_PackB();
-            if (packB)
-                sp_BrickTypes.Add(DiceAltas.GetSprite("MG_Sprite_DiceCashB"));
-            else
-                sp_BrickTypes.Add(DiceAltas.GetSprite("MG_Sprite_DiceCashA"));
+            sp_BrickTypes.Add(DiceAltas.GetSprite("MG_Sprite_DiceCash"));
             sp_BrickTypes.Add(DiceAltas.GetSprite("MG_Sprite_DiceGold"));
             sp_BrickTypes.Add(DiceAltas.GetSprite("MG_Sprite_DiceSlots"));
             sp_BrickTypes.Add(DiceAltas.GetSprite("MG_Sprite_DiceScratch"));
             sp_BrickTypes.Add(DiceAltas.GetSprite("MG_Sprite_DiceAmazon"));
-            Sprite loadedEmptyBrick = DiceAltas.GetSprite("MG_Sprite_DiceEmpty" + MG_SaveManager.CurrentBgIndex);
+            Sprite loadedEmptyBrick = DiceAltas.GetSprite("MG_Sprite_DiceEmpty");
             sp_BrickTypes.Add(loadedEmptyBrick);
-            dic_LoadedEmptyBricks.Add(MG_SaveManager.CurrentBgIndex, loadedEmptyBrick);
             sp_oldbrick = DiceAltas.GetSprite("MG_Sprites_DiceOldBrick");
 
             dic_DiceConfig = MG_Manager.Instance.Get_Config_DiceBrick();
@@ -76,9 +70,9 @@ namespace MiddleGround.UI
             if (MG_Manager.Instance.Get_Save_DiceLife() > 0)
             {
                 ac_Dice.enabled = true;
+                MG_Manager.Instance.Add_Save_DiceLife(-1);
                 ac_Dice.SetBool("RollStart", true);
                 nextStep = RandomStep();
-                MG_Manager.Instance.Add_Save_DiceLife(-1);
                 if (MG_SaveManager.TodayExtraRewardTimes > 0)
                     MG_SaveManager.DiceNextGiftTime--;
                 MG_Manager.Instance.canChangeGame = false;
@@ -286,34 +280,24 @@ namespace MiddleGround.UI
             {
                 MG_SaveManager.DiceCurrentStep = 0;
                 MG_SaveManager.CurrentBgIndex++;
-                img_BG.sprite = MG_Manager.Instance.Get_GamePanelBg();
-                if (dic_LoadedEmptyBricks.ContainsKey(MG_SaveManager.CurrentBgIndex))
-                {
-                    sp_BrickTypes[(int)MG_Dice_BrickType.Empty] = dic_LoadedEmptyBricks[MG_SaveManager.CurrentBgIndex];
-                }
-                else
-                {
-                    Sprite loadedEmptyBrick = DiceAltas.GetSprite("MG_Sprite_DiceEmpty" + MG_SaveManager.CurrentBgIndex);
-                    sp_BrickTypes[(int)MG_Dice_BrickType.Empty] = loadedEmptyBrick;
-                    dic_LoadedEmptyBricks.Add(MG_SaveManager.CurrentBgIndex, loadedEmptyBrick);
-                }
                 RandomBrickReward();
                 SetBrickSprite();
                 if (MG_SaveManager.TodayExtraRewardTimes > 0)
                 {
                     MG_Manager.Instance.Random_DiceOrExtraReward(MG_PopRewardPanel_RewardType.Extra);
-                    if (!MG_SaveManager.HasRateus && MG_Manager.Instance.Get_Save_PackB())
+                    if (!MG_SaveManager.HasRateus && MG_Manager.Instance.Get_Save_PackB() && MG_Manager.Instance.NeedRateusGuid)
                         MG_Manager.Instance.willRateus = true;
                 }
                 else
                 {
-                    if (!MG_SaveManager.HasRateus && MG_Manager.Instance.Get_Save_PackB())
+                    if (!MG_SaveManager.HasRateus && MG_Manager.Instance.Get_Save_PackB() && MG_Manager.Instance.NeedRateusGuid)
                         MG_UIManager.Instance.ShowPopPanelAsync(MG_PopPanelType.Rateus);
                 }
             }
             else
             {
                 MG_SaveManager.DiceCurrentStep += nextStep;
+                //MG_UIManager.Instance.MenuPanel.CheckGuid();
                 switch (_moveOverReward)
                 {
                     case MG_Dice_BrickType.Gold:
@@ -326,10 +310,10 @@ namespace MiddleGround.UI
                         MG_UIManager.Instance.ShowPopPanelAsync(MG_PopPanelType.DiceSlotsPanel);
                         break;
                     case MG_Dice_BrickType.Scratch:
-                        MG_Manager.Instance.Show_PopDoublePanel_Reward(MG_PopDoublePanel_RewardType.Scratch, 1);
+                        MG_Manager.Instance.Show_MostRewardPanel(MG_RewardPanelType.AdDouble, MG_RewardType.ScratchTicket, 1);
                         break;
                     case MG_Dice_BrickType.Amazon:
-                        MG_Manager.Instance.Show_PopDoublePanel_Reward(MG_PopDoublePanel_RewardType.Amazon,1);
+                        MG_Manager.Instance.Show_MostRewardPanel(MG_RewardPanelType.AdClaim, MG_RewardType.Amazon, 1);
                         break;
                     default:
                         if (MG_SaveManager.TodayExtraRewardTimes > 0 && MG_Manager.Instance.hasGift)
@@ -338,11 +322,7 @@ namespace MiddleGround.UI
                             MG_Manager.Instance.Random_DiceOrExtraReward(MG_PopRewardPanel_RewardType.Extra);
                         }
                         else
-                        {
-                            if (MG_SaveManager.DiceTotalPlayTimes == 3)
-                                MG_Manager.Instance.next_GuidType = MG_Guid_Type.DiceGuid;
                             MG_UIManager.Instance.MenuPanel.CheckGuid();
-                        }
                         break;
                 }
             }
@@ -446,10 +426,10 @@ namespace MiddleGround.UI
                 MG_SaveManager.DiceNextGiftTime = MG_Manager.Instance.Get_Config_NextGiftStep();
                 MG_Manager.Instance.hasGift = true;
             }
-            text_RollNum.text = MG_Manager.Instance.Get_Save_DiceLife() + "/" + MG_SaveManager.DiceMaxLife;
+            text_RollNum.text = MG_Manager.Instance.Get_Save_DiceLife() + " / " + MG_SaveManager.DiceMaxLife;
             if (MG_SaveManager.TodayExtraRewardTimes > 0)
             {
-                text_GiftNum.text = "Next in " + MG_SaveManager.DiceNextGiftTime + " steps";
+                text_GiftNum.text = "Next in <color=#7CFFBB>" + MG_SaveManager.DiceNextGiftTime + "</color> rolls";
                 noGift = false;
             }
             else
@@ -465,7 +445,6 @@ namespace MiddleGround.UI
             canvasGroup.blocksRaycasts = true;
             trans_CurrentStep.localPosition = img_Bricks[MG_SaveManager.DiceCurrentStep].transform.localPosition;
             UpdateDiceLifeAndGiftStepText();
-            img_BG.sprite = MG_Manager.Instance.Get_GamePanelBg();
             yield return null;
         }
 
@@ -492,7 +471,7 @@ namespace MiddleGround.UI
                 {
                     int currentEnergy = MG_Manager.Instance.AddEnergyNatural();
                     nextEnergyTime = MG_SaveManager.RevertDiceLifeTimePer;
-                    text_RollNum.text = currentEnergy + "/" + MG_SaveManager.DiceMaxLife;
+                    text_RollNum.text = currentEnergy + " / " + MG_SaveManager.DiceMaxLife;
                 }
                 else
                     nextEnergyTime--;

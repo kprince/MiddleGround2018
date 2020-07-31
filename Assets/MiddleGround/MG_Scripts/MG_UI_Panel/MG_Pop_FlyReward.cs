@@ -23,14 +23,9 @@ namespace MiddleGround.UI
             f_OffsetX_EachPart = Screen.width * 0.1f;
 
         }
-        bool packB;
-        bool hasInit = false;
-        public void Init()
+        private void Start()
         {
-            if (hasInit) return;
-            hasInit = true;
             shopSA = MG_UIManager.Instance.GetSpriteAtlas((int)MG_PopPanelType.ShopPanel);
-            packB = MG_Manager.Instance.Get_Save_PackB();
         }
         Vector3 StartPos = Vector3.zero;
         Vector3 TargetPos = Vector3.zero;
@@ -161,8 +156,6 @@ namespace MiddleGround.UI
             if (targetSprite is null)
             {
                 string sp_name = "MG_Sprite_Shop_" + flyType;
-                if (flyType == MG_MenuFlyTarget.Cash)
-                    sp_name += packB ? "B" : "A";
                 targetSprite = shopSA.GetSprite(sp_name);
                 dic_flytype_sp.Add((int)flyType, targetSprite);
             }

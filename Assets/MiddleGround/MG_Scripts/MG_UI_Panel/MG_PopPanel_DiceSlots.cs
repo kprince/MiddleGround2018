@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using MiddleGround.UI.ButtonAnimation;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -10,12 +11,17 @@ namespace MiddleGround.UI
     public class MG_PopPanel_DiceSlots : MG_UIBase
     {
         public Button btn_Spin;
-        public GameObject go_adicon;
-        public RectTransform rect_spin;
+        public Image img_buttonText;
         public Image img_L;
         public Image img_M;
         public Image img_R;
-        public Image img_Notice;
+        public Image img_Light;
+        public Transform trans_spinbutton;
+        public MG_Slots_ButtonAnimation _ButtonAnimation;
+        Sprite sp_spin;
+        Sprite sp_adAgain;
+        Sprite sp_LightA;
+        Sprite sp_LightB;
         static readonly Dictionary<string, float> dic_name_offsetY = new Dictionary<string, float>()
         {
             {"Cash5",0.848f },
@@ -30,23 +36,26 @@ namespace MiddleGround.UI
             {"7",0.948f}
         };
         const string mat_mainTex_Key = "_MainTex";
-        const float offsetXA = 0.5f;
-        const float offsetXB = 0;
         float finalOffsetX = 0.25f;
-        SpriteAtlas diceslotsSA;
+        SpriteAtlas slotsSA;
         protected override void Awake()
         {
             base.Awake();
             btn_Spin.onClick.AddListener(OnSpinButtonClick);
             bool packB = MG_Manager.Instance.Get_Save_PackB();
-            finalOffsetX = packB ? offsetXB : offsetXA;
-            diceslotsSA = MG_UIManager.Instance.GetSpriteAtlas((int)MG_PopPanelType.DiceSlotsPanel);
-            img_Notice.sprite = diceslotsSA.GetSprite(packB ? "MG_Sprite_DiceSlots_NoticeB" : "MG_Sprite_DiceSlots_NoticeA");
+            finalOffsetX = 0;
+            slotsSA = MG_UIManager.Instance.GetSpriteAtlas((int)MG_GamePanelType.SlotsPanel);
+            sp_spin = slotsSA.GetSprite("MG_Sprite_Slots_Spin");
+            sp_adAgain = slotsSA.GetSprite("MG_Sprite_Slots_Again");
+            sp_LightA = slotsSA.GetSprite("MG_Sprite_Slots_LightA");
+            sp_LightB = slotsSA.GetSprite("MG_Sprite_Slots_LightB");
             text_nothanks.GetComponent<Button>().onClick.AddListener(OnNothanksClick);
+            _ButtonAnimation.Init(() => { img_buttonText.transform.localPosition = new Vector2(0, -11); }, () => { img_buttonText.transform.localPosition = new Vector2(0, 15); });
         }
         bool isSpining = false;
         int rewardNum = 0;
         bool rewardIsGold = false;
+        float rewardMutiple = 1;
         int clickTime = 0;
         void OnSpinButtonClick()
         {
@@ -55,8 +64,6 @@ namespace MiddleGround.UI
             if (!needAd)
             {
                 needAd = true;
-                go_adicon.SetActive(true);
-                rect_spin.localPosition = new Vector2(26, 4);
             }
             else
             {
@@ -66,7 +73,7 @@ namespace MiddleGround.UI
             }
             isSpining = true;
 
-            rewardNum = MG_Manager.Instance.Random_DiceSlotsReward(out rewardIsGold);
+            rewardNum = MG_Manager.Instance.Random_DiceSlotsReward(out rewardIsGold, out rewardMutiple);
             StartCoroutine(StartSpin());
 
         }
@@ -74,7 +81,7 @@ namespace MiddleGround.UI
         {
             clickTime = 0;
             isSpining = true;
-            rewardNum = MG_Manager.Instance.Random_DiceSlotsReward(out rewardIsGold);
+            rewardNum = MG_Manager.Instance.Random_DiceSlotsReward(out rewardIsGold, out rewardMutiple);
             StartCoroutine(StartSpin());
         }
         void OnNothanksClick()
@@ -157,6 +164,7 @@ namespace MiddleGround.UI
             bool back_M = false;
             bool stop_R = false;
             bool back_R = false;
+            StartCoroutine("AutoShiningLight");
             AudioSource as_Spin = MG_Manager.Play_SpinSlots();
             while (!stop_R || !stop_M || !stop_L)
             {
@@ -243,7 +251,9 @@ namespace MiddleGround.UI
                     }
             }
             as_Spin.Stop();
+            img_buttonText.sprite = sp_adAgain;
             yield return new WaitForSeconds(0.5f * Time.timeScale);
+            StopCoroutine("AutoShiningLight");
             if (rewardNum == 0)
             {
                 isSpining = false;
@@ -252,20 +262,28 @@ namespace MiddleGround.UI
             else
             {
                 MG_UIManager.Instance.ClosePopPanelAsync(MG_PopPanelType.DiceSlotsPanel);
-                MG_UIManager.Instance.ShowPopPanelAsync(MG_PopPanelType.DiceRewardPanel);
+                if (rewardIsGold)
+                    MG_Manager.Instance.Show_MostRewardPanel(MG_RewardPanelType.AdRandom, MG_RewardType.Gold, rewardNum, rewardMutiple);
+                else
+                    MG_Manager.Instance.Show_CashRewardPanel(MG_RewardPanelType.AdRandom, rewardNum, rewardMutiple);
             }
         }
         public Text text_nothanks;
+        Color32 color_EndThanks = new Color32(154, 154, 154, 255);
+        Color32 color_StartThanks = new Color32(154, 154, 154, 0);
         IEnumerator WaitShowNothanks()
         {
             if (text_nothanks.color.a > 0)
                 yield break;
-            while (text_nothanks.color.a<1)
+            yield return new WaitForSeconds(Time.timeScale);
+            float progress = 0;
+            while (progress<1)
             {
                 yield return null;
-                text_nothanks.color += Color.white * Time.unscaledDeltaTime * 2;
+                progress+= Time.unscaledDeltaTime * 2;
+                text_nothanks.color = new Color32(color_EndThanks.r, color_EndThanks.g, color_EndThanks.b, (byte)(255 * progress));
             }
-            text_nothanks.color = Color.white;
+            text_nothanks.color = color_EndThanks;
             text_nothanks.raycastTarget = true;
         }
         public override IEnumerator OnEnter()
@@ -273,12 +291,11 @@ namespace MiddleGround.UI
             clickTime = 0;
             isSpining = false;
             needAd = false;
-            go_adicon.SetActive(false);
-            rect_spin.localPosition = new Vector2(0, 4);
+            img_buttonText.sprite = sp_spin;
             img_L.material.SetTextureOffset(mat_mainTex_Key, new Vector2(finalOffsetX, dic_name_offsetY["7"]));
             img_M.material.SetTextureOffset(mat_mainTex_Key, new Vector2(finalOffsetX, dic_name_offsetY["7"]));
             img_R.material.SetTextureOffset(mat_mainTex_Key, new Vector2(finalOffsetX, dic_name_offsetY["7"]));
-            text_nothanks.color = Color.clear;
+            text_nothanks.color = color_StartThanks;
             text_nothanks.raycastTarget = false;
 
             Transform transAll = transform.GetChild(1);
@@ -297,6 +314,17 @@ namespace MiddleGround.UI
             canvasGroup.interactable = true;
 
         }
+        IEnumerator AutoShiningLight()
+        {
+            bool isA = false;
+            WaitForSeconds wait = new WaitForSeconds(0.1f * Time.timeScale);
+            while (true)
+            {
+                yield return wait;
+                isA = !isA;
+                img_Light.sprite = isA ? sp_LightA : sp_LightB;
+            }
+        }
         public override IEnumerator OnExit()
         {
             Transform transAll = transform.GetChild(1);
@@ -312,13 +340,21 @@ namespace MiddleGround.UI
             canvasGroup.alpha = 0;
             canvasGroup.blocksRaycasts = false;
 
-            if (MG_Manager.Instance.hasGift && !isSpining)
+            if (!isSpining)
             {
-                MG_Manager.Instance.hasGift = false;
-                MG_Manager.Instance.Random_DiceOrExtraReward(MG_PopRewardPanel_RewardType.Extra);
+                if (MG_Manager.Instance.hasGift)
+                {
+                    MG_Manager.Instance.hasGift = false;
+                    MG_Manager.Instance.Random_DiceOrExtraReward(MG_PopRewardPanel_RewardType.Extra);
+                }
+                else
+                    MG_UIManager.Instance.MenuPanel.CheckGuid();
             }
             else
+            {
                 MG_Manager.Instance.canChangeGame = true;
+            }
+            StopCoroutine("WaitShowNothanks");
         }
         public override void OnPause()
         {
